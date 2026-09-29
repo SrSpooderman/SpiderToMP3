@@ -22,14 +22,19 @@ class VersioningTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_version("0.1.0-rc.01")
         check_version("0.1.0-rc.1")
-        notes = release_notes(Path("CHANGELOG.md").read_text(encoding="utf-8"))
-        self.assertIn("Primera versión", notes)
+        changelog = Path("CHANGELOG.md").read_text(encoding="utf-8")
+        notes = release_notes(changelog)
+        self.assertTrue(notes.strip())
+        with self.assertRaises(ValueError):
+            release_notes(changelog, "9.9.9")
 
     def test_windows_version_resource_uses_same_version(self):
         resource = windows_version_resource()
         ast.parse(resource, mode="eval")
         self.assertIn(f"ProductVersion', '{APP_VERSION}'", resource)
-        self.assertIn("filevers=(0, 1, 0, 0)", resource)
+        version_numbers = tuple(map(int, APP_VERSION.split("-", 1)[0].split("."))) + (0,)
+        self.assertIn(f"filevers={version_numbers!r}", resource)
+        self.assertIn(f"prodvers={version_numbers!r}", resource)
 
 
 class ReleaseAssetsTests(unittest.TestCase):

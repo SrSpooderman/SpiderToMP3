@@ -3,6 +3,10 @@
 Cada versión publicada tiene aquí sus notas. La etiqueta Git `vX.Y.Z` debe
 coincidir con `APP_VERSION` en `config.py`.
 
+## [0.1.2]
+
+- Corrige las pruebas de versión para futuras publicaciones.
+
 ## [0.1.1]
 
 - Corrige la dependencia libEGL en los jobs de Linux.
