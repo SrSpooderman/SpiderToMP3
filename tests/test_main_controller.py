@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from controllers.main_controller import MainController
+from models import DownloadRequest
 from qt import QMessageBox
 
 
@@ -49,6 +50,19 @@ class MainControllerCloseTests(unittest.TestCase):
 
         event.accept.assert_called_once()
         event.ignore.assert_not_called()
+
+    def test_retry_uses_only_failed_urls(self):
+        self.controller.thread = None
+        request = DownloadRequest("https://example.test/list", (2,))
+        self.controller.window.failed_requests.return_value = [request]
+        with patch.object(self.controller, "_begin_download") as begin:
+            self.controller.retry_failed()
+        begin.assert_called_once_with(["https://example.test/list"], [request])
+
+    def test_cancelled_download_updates_queue_state(self):
+        with patch.object(QMessageBox, "warning"):
+            self.controller.download_finished(False, "Descarga cancelada.")
+        self.controller.window.mark_active_cancelled.assert_called_once()
 
 
 if __name__ == "__main__":

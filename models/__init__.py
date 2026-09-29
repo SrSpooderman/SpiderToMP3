@@ -1,3 +1,3 @@
-from models.download import DownloadSettings
+from models.download import DownloadRequest, DownloadSettings
 
-__all__ = ["DownloadSettings"]
+__all__ = ["DownloadRequest", "DownloadSettings"]

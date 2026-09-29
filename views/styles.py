@@ -20,6 +20,10 @@ QLabel#Hint {
     border-radius: 6px;
     padding: 8px;
 }
+QLabel#Error {
+    color: #a32424;
+    font-weight: 600;
+}
 QLineEdit, QTextEdit, QPlainTextEdit, QListWidget, QComboBox {
     background: #ffffff;
     border: 1px solid #d5d8df;

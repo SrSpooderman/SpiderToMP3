@@ -16,6 +16,12 @@ class ParseUrlsTests(unittest.TestCase):
             ["https://a.test/1"],
         )
 
+    def test_keeps_commas_inside_a_url(self):
+        self.assertEqual(
+            parse_urls("https://a.test/audio?ids=1,2,3, https://b.test/song"),
+            ["https://a.test/audio?ids=1,2,3", "https://b.test/song"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

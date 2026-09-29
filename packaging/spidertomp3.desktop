@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=SpiderToMP3
+Comment=Descarga audio de enlaces compatibles con yt-dlp
+Exec=SpiderToMP3-linux-x86_64
+Icon=spidertomp3
+Categories=AudioVideo;Audio;
+Terminal=false

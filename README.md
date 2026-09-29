@@ -1,6 +1,9 @@
 # SpiderToMP3
 
 Aplicación de escritorio para descargar audio de enlaces compatibles con `yt-dlp`.
+Procesa cada audio de una lista por separado, muestra el estado de la cola y
+permite reintentar cada elemento fallido y consultar su error. La descarga se ejecuta en un proceso
+separado para poder cancelarla incluso durante una conversión.
 
 ## Requisitos
 
@@ -9,22 +12,26 @@ Aplicación de escritorio para descargar audio de enlaces compatibles con `yt-dl
 
 ## Instalación
 
-```bash
-python -m venv .venv
-```
-
-En Windows, activa el entorno con `.venv\Scripts\activate`. En Linux o macOS,
-usa `source .venv/bin/activate`. Después instala las dependencias:
+Desde la raíz del repositorio, ejecuta este mismo comando en Bash de Linux o en
+Git Bash de Windows:
 
 ```bash
-python -m pip install -r requirements.txt
+source ./setup-env.sh
 ```
+
+El script crea `.venv`, lo activa en la terminal actual e instala
+`requirements.txt`. Si el entorno ya existe, lo activa y solo vuelve a instalar
+dependencias cuando cambia ese archivo. Repite el mismo comando al abrir una
+terminal nueva. Para salir, ejecuta `deactivate`.
 
 ## Uso
 
 ```bash
 python main.py
 ```
+
+Para consultar la versión desde el código fuente: `python main.py --version`.
+La ventana también la muestra en **Ayuda → Acerca de SpiderToMP3**.
 
 Los módulos de la aplicación (`controllers/`, `models/`, `services/` y `views/`)
 están en la raíz del repositorio. Escribe uno o varios enlaces, elige la carpeta
@@ -36,26 +43,57 @@ de salida y el formato, y pulsa **Descargar**.
 python -m unittest discover -s tests -v
 ```
 
-Las pruebas simulan `yt-dlp`; no descargan contenido ni necesitan FFmpeg. GitHub
-Actions las ejecuta en Linux y Windows con Python 3.12 y 3.13.
+Las pruebas unitarias simulan `yt-dlp`. Las pruebas de integración generan un WAV
+local y lo convierten con FFmpeg sin acceder a Internet. GitHub Actions ejecuta
+las pruebas en Linux y Windows con Python 3.12 y 3.13.
 
-## Ejecutables para Windows y Bazzite
+## Versiones y ejecutables
 
-Al pasar las pruebas, GitHub Actions genera `SpiderToMP3.exe` para Windows y
-`SpiderToMP3-linux-x86_64` para Linux de 64 bits. Abre la ejecución del workflow
-**Tests** en la pestaña **Actions** y descarga `SpiderToMP3-Windows-Linux.zip`
-desde **Artifacts**. Ese archivo contiene los dos ejecutables.
+La versión se define una sola vez en `APP_VERSION` de `config.py`. Seguimos
+`MAJOR.MINOR.PATCH`: corrección, función compatible y cambio incompatible,
+respectivamente. Antes de publicar una versión, añade sus notas a
+[CHANGELOG.md](CHANGELOG.md) y crea una etiqueta Git `vX.Y.Z` que coincida con
+`APP_VERSION`. El workflow verifica la coincidencia, prueba ambos sistemas y
+publica una GitHub Release. La primera Release se publicará al crear su etiqueta;
+el código por sí solo no la publica.
 
-En Bazzite, extrae el ZIP y ejecuta:
+En **Releases** de este repositorio, cada versión tendrá tres descargas separadas:
+
+- `SpiderToMP3-vX.Y.Z-windows-x86_64.exe` para Windows.
+- `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz` con el ejecutable e instalador de Bazzite.
+- `SHA256SUMS` para comprobar ambas descargas.
+
+Las compilaciones de ramas y pull requests dejan los ejecutables de prueba en
+**Actions → Tests → Artifacts** durante un día. Las versiones para usuarios se
+descargan desde **Releases**.
+
+En Bazzite, extrae el paquete Linux y ejecuta el instalador para tu usuario:
 
 ```bash
-chmod +x SpiderToMP3-linux-x86_64
-./SpiderToMP3-linux-x86_64
+tar -xzf SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz
+sh install-bazzite.sh
 ```
+
+Después abre **SpiderToMP3** desde el menú. También puedes ejecutar el binario
+sin instalarlo con `chmod +x SpiderToMP3-linux-x86_64` y
+`./SpiderToMP3-linux-x86_64`.
+La elección de formato para Bazzite se explica en
+[packaging/OPTIONS.md](packaging/OPTIONS.md).
 
 El binario Linux se construye en Ubuntu 24.04 para equipos x86_64. Ambos
 ejecutables incluyen Python y las dependencias de la app, pero necesitan FFmpeg
 disponible en el `PATH` del sistema (`command -v ffmpeg` en Bazzite).
+
+Para volver a una versión anterior, descarga sus archivos desde esa Release y
+ejecuta de nuevo el instalador de Bazzite, o usa su `.exe` en Windows.
+
+La app guarda la carpeta, formato, calidad y hasta 20 enlaces recientes en las
+preferencias del usuario. El botón **Borrar historial** elimina esos enlaces.
+Los enlaces deben ser HTTP o HTTPS; se admiten comas dentro de una URL. El
+nombre por defecto incluye el identificador del audio para evitar colisiones.
+Si el archivo de salida ya existe, se informa del fallo y no se sobrescribe.
+El registro de pantalla conserva las últimas 1000 líneas y se puede copiar con
+**Copiar registro**.
 
 ## Próximas mejoras
 

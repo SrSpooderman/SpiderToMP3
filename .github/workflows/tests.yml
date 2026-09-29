@@ -8,8 +8,29 @@ permissions:
   contents: read
 
 jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      app_version: ${{ steps.read.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Check version and release notes
+        id: read
+        run: |
+          version=$(python -m scripts.versioning show)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          python -m scripts.versioning notes > /dev/null
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            python -m scripts.versioning check-tag "$GITHUB_REF_NAME"
+          fi
+
   unit-tests:
     runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
     strategy:
       fail-fast: false
       matrix:
@@ -21,13 +42,26 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
+      - name: Check Bash environment setup
+        shell: bash
+        run: |
+          test_dir=$(mktemp -d)
+          cp setup-env.sh "$test_dir/setup-env.sh"
+          : > "$test_dir/requirements.txt"
+          source "$test_dir/setup-env.sh"
+          python -c 'import sys; assert sys.prefix != sys.base_prefix'
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
+      - name: Install FFmpeg for integration tests
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
       - name: Run unit tests
         run: python -m unittest discover -s tests -v
 
   build-windows:
-    needs: unit-tests
+    needs: [unit-tests, version]
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
@@ -38,14 +72,33 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install -r requirements.txt
-          python -m pip install pyinstaller==6.22.3
+          python -m pip install -r requirements-build.txt
+      - name: Create Windows version resource
+        run: python -m scripts.versioning windows-resource version-info.txt
       - name: Build executable
         run: >-
           python -m PyInstaller
           --noconfirm --clean --onefile --windowed
           --name SpiderToMP3
+          --version-file version-info.txt
           --collect-submodules yt_dlp
+          --add-data=assets/spidertomp3.svg:assets
           main.py
+      - name: Smoke test Windows executable
+        timeout-minutes: 2
+        shell: pwsh
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          $program = (Resolve-Path "dist/SpiderToMP3.exe").Path
+          $process = Start-Process -FilePath $program -ArgumentList "--smoke-test" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "El ejecutable salió con código $($process.ExitCode)" }
+          $version = "${{ needs.version.outputs.app_version }}"
+          if ((Get-Item $program).VersionInfo.ProductVersion -ne $version) { throw "Versión de Windows incorrecta" }
+          $versionProcess = Start-Process -FilePath $program -ArgumentList "--version" -Wait -PassThru
+          if ($versionProcess.ExitCode -ne 0) { throw "--version falló en Windows" }
+      - name: Test Windows worker communication
+        timeout-minutes: 2
+        run: python -m scripts.smoke_frozen_worker dist/SpiderToMP3.exe
       - name: Upload executable
         uses: actions/upload-artifact@v7
         with:
@@ -55,7 +108,7 @@ jobs:
           retention-days: 1
 
   build-linux:
-    needs: unit-tests
+    needs: [unit-tests, version]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
@@ -66,22 +119,23 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install -r requirements.txt
-          python -m pip install pyinstaller==6.22.3
+          python -m pip install -r requirements-build.txt
       - name: Build executable
         run: >-
           python -m PyInstaller
           --noconfirm --clean --onefile
           --name SpiderToMP3-linux-x86_64
           --collect-submodules yt_dlp
+          --add-data=assets/spidertomp3.svg:assets
           main.py
       - name: Smoke test executable
         env:
           QT_QPA_PLATFORM: offscreen
         run: |
-          set +e
-          timeout 15s dist/SpiderToMP3-linux-x86_64
-          exit_code=$?
-          test "$exit_code" -eq 124
+          timeout 60s dist/SpiderToMP3-linux-x86_64 --smoke-test
+          test "$(dist/SpiderToMP3-linux-x86_64 --version)" = "SpiderToMP3 ${{ needs.version.outputs.app_version }}"
+      - name: Test Linux worker communication
+        run: python -m scripts.smoke_frozen_worker dist/SpiderToMP3-linux-x86_64
       - name: Upload executable
         uses: actions/upload-artifact@v7
         with:
@@ -90,29 +144,46 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  bundle:
-    needs: [build-windows, build-linux]
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [unit-tests, version, build-windows, build-linux]
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
       - name: Download Windows executable
         uses: actions/download-artifact@v8
         with:
           name: windows-build
-          path: bundle
+          path: inputs
       - name: Download Linux executable
         uses: actions/download-artifact@v8
         with:
           name: linux-build
-          path: bundle
-      - name: Package both executables
+          path: inputs
+      - name: Prepare separate release assets
         run: |
-          test -f bundle/SpiderToMP3.exe
-          test -f bundle/SpiderToMP3-linux-x86_64
-          chmod +x bundle/SpiderToMP3-linux-x86_64
-          zip -j SpiderToMP3-Windows-Linux.zip bundle/SpiderToMP3.exe bundle/SpiderToMP3-linux-x86_64
-      - name: Upload combined artifact
-        uses: actions/upload-artifact@v7
-        with:
-          path: SpiderToMP3-Windows-Linux.zip
-          if-no-files-found: error
-          archive: false
+          python -m scripts.versioning check-tag "$GITHUB_REF_NAME"
+          python -m scripts.release_assets prepare inputs release
+          python -m scripts.release_assets verify release
+          python -m scripts.versioning notes > release-notes.md
+      - name: Test packaged Bazzite installer
+        env:
+          APP_VERSION: ${{ needs.version.outputs.app_version }}
+        run: |
+          mkdir -p package-check "$RUNNER_TEMP/spider-home"
+          tar -xzf "release/SpiderToMP3-v${APP_VERSION}-linux-x86_64.tar.gz" -C package-check
+          SPIDER_INSTALL_HOME="$RUNNER_TEMP/spider-home" sh package-check/install-bazzite.sh
+          test -x "$RUNNER_TEMP/spider-home/.local/bin/SpiderToMP3-linux-x86_64"
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APP_VERSION: ${{ needs.version.outputs.app_version }}
+        run: |
+          flags=(--verify-tag --notes-file release-notes.md)
+          if [[ "$APP_VERSION" == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" release/* "${flags[@]}"

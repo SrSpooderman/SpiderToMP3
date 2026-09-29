@@ -1,54 +1,60 @@
-# TODO de mejoras
+# TODO: próximos capítulos del spider
 
-Ordenado por impacto. Cada casilla describe una tarea pendiente y cómo comprobar
-que está terminada.
+P0 y P1 están implementados. La primera Release aún espera su etiqueta Git;
+los asuntos de P2 siguen en la cola, tomando café.
 
-## P0 · Funcionamiento y errores
+## P0 · Versiones con nombre y apellidos
 
-- [ ] **Hacer que la cola y el progreso representen cada audio de una playlist.**
-  Ahora el porcentaje usa el número de enlaces y la cola muestra enlaces, aunque
-  uno pueda contener varios audios. Terminado cuando el porcentaje no retrocede,
-  no llega al 100 % antes de acabar la conversión y cada audio tiene un estado
-  visible (`pendiente`, `descargando`, `convirtiendo`, `completado` o `fallido`).
-- [ ] **Hacer la cancelación fiable durante descargas y conversiones largas.**
-  Hoy se comprueba en los hooks de `yt-dlp`, así que puede tardar en responder si
-  no llegan eventos. Terminado cuando cancelar o cerrar detiene el trabajo,
-  espera al hilo sin bloquear indefinidamente y deja la interfaz en un estado
-  coherente. Añadir pruebas de cancelación durante descarga y FFmpeg.
-- [ ] **Validar las opciones antes de arrancar el hilo.** Comprobar que la carpeta
-  de salida se puede crear y escribir, que la plantilla de nombre es válida para
-  `yt-dlp` y que FFmpeg está disponible. Mostrar el problema junto al campo
-  afectado. Terminado cuando estas entradas fallan antes de iniciar una descarga
-  y tienen pruebas de casos inválidos.
+- [x] **Una sola versión oficial.** Empezar, por ejemplo, en `0.1.0` y guardar
+  el número en un único sitio (`APP_VERSION` en `config.py`, o metadatos del
+  proyecto si se empaqueta como paquete Python). Mostrarlo en «Acerca de» y con
+  `--version`; incorporarlo también a los nombres de los ejecutables. Nada de
+  tres versiones distintas fingiendo ser la misma aplicación.
+- [x] **Seguir SemVer sin invocar magia negra.** Usar `MAJOR.MINOR.PATCH`:
+  corrección compatible → PATCH; función compatible → MINOR; cambio incompatible
+  → MAJOR. Durante el desarrollo inicial, usar `0.x.y`. Crear la etiqueta Git
+  `vX.Y.Z` para cada versión y comprobar en CI que coincide con `APP_VERSION`.
+- [x] **Anotar qué cambió.** Mantener notas breves por versión (`CHANGELOG.md` o
+  notas automáticas revisadas) y marcar versiones de prueba como *prerelease*.
 
-## P1 · Calidad y distribución
+## P0 · Releases, cada sistema con su maleta
 
-- [ ] **Tratar los errores por elemento de la cola.** Ahora un fallo detiene el
-  lote completo (`ignoreerrors=False`). Permitir reintentar un elemento fallido
-  o continuar con los siguientes, y mostrar un resumen final de éxitos y fallos.
-- [ ] **Ajustar la calidad al formato elegido.** El deslizador de 0 a 9 se pasa
-  igual a todos los códecs, aunque su significado cambia. Mostrar opciones
-  válidas y comprensibles para MP3, M4A, Opus, WAV y FLAC, con pruebas de las
-  opciones que llegan a `yt-dlp`.
-- [ ] **Añadir pruebas de integración sin depender de Internet.** Usar un archivo
-  de audio local y FFmpeg para comprobar la conversión, y cubrir el ciclo de
-  vida de la ventana y el hilo en Qt. Mantener las pruebas unitarias rápidas.
-- [ ] **Verificar ambos ejecutables antes de publicar el ZIP.** El workflow ya
-  prueba el arranque del binario Linux; añadir una prueba equivalente para el
-  `.exe` de Windows y comprobar que el ZIP final contiene los dos archivos con
-  los nombres esperados.
-- [ ] **Hacer las compilaciones reproducibles.** Fijar y actualizar de forma
-  controlada las versiones de las dependencias de ejecución y de empaquetado;
-  publicar sumas SHA-256 junto a los binarios. Terminado cuando la misma revisión
-  usa las mismas versiones en ambos sistemas y el ZIP incluye las sumas.
+- [x] **Publicar al crear una etiqueta `vX.Y.Z`.** Ejecutar pruebas y compilación
+  de Windows y Linux; si todo pasa, crear una única GitHub Release para esa
+  versión. Los Artifacts del workflow servirán para pasar archivos entre jobs;
+  la descarga pública y duradera estará en Releases. Dar permiso de escritura
+  al contenido solo al job que publica.
+- [x] **Separar las descargas.** Adjuntar a la misma Release
+  `SpiderToMP3-vX.Y.Z-windows-x86_64.exe` y
+  `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz`. El paquete Linux debe incluir el
+  ejecutable, el instalador de Bazzite, el icono y el archivo `.desktop`.
+  Adjuntar `SHA256SUMS` para verificar cada descarga. Adiós al ZIP mezclado:
+  cada pingüino y cada ventana en su propia maleta.
+- [x] **Comprobar antes de abrir la maleta.** Probar el arranque de ambos binarios,
+  `--version`, la comunicación con el proceso de descarga y la instalación del
+  paquete Linux; verificar nombres y sumas antes de publicar la Release.
+- [x] **Actualizar las instrucciones.** Explicar en el README cómo descargar la
+  versión correcta desde Releases, instalarla en Bazzite y volver a una versión
+  anterior si una araña decide aprender a bailar claqué.
 
-## P2 · Experiencia de uso
+## P1 · Menos sorpresas durante la descarga
 
-- [ ] **Guardar preferencias e historial.** Recordar carpeta, formato, calidad y
-  enlaces recientes entre sesiones; permitir borrar el historial desde la app.
-- [ ] **Mejorar el uso en Bazzite.** Crear un icono y un archivo `.desktop` para
-  abrir el ejecutable desde el menú; estudiar AppImage o Flatpak si se busca una
-  instalación sin pasos manuales.
-- [ ] **Revisar accesibilidad y textos.** Asociar etiquetas a los controles,
-  comprobar navegación con teclado y lectores de pantalla, y corregir tildes y
-  mensajes de error en la interfaz.
+- [x] **Reintento de verdad individual.** Conservar el identificador de cada
+  audio para reintentar solo el elemento fallido, incluso si venía de una lista;
+  mostrar la causa del fallo junto al elemento.
+- [x] **Evitar pisar canciones homónimas.** Revisar el patrón de nombre por
+  defecto y las colisiones entre audios con el mismo título; avisar antes de
+  sobrescribir archivos existentes.
+- [x] **Enlaces menos caprichosos.** Validar los enlaces antes de iniciar el
+  proceso y aceptar comas que formen parte de una URL sin partirla en dos.
+- [x] **Registro útil, memoria tranquila.** Limitar el tamaño del registro en
+  pantalla y ofrecer una forma de copiar o guardar los detalles de un fallo.
+
+## P2 · La vida real llama a la puerta
+
+- [ ] **Probar en Bazzite de verdad.** Verificar el paquete Linux, FFmpeg y el
+  lanzador `.desktop` en una instalación Bazzite; documentar cualquier paso
+  adicional que aparezca.
+- [ ] **Aclarar Spotify.** Documentar qué enlaces admite realmente `yt-dlp`,
+  si la aplicación necesita alguna credencial y qué ocurre con enlaces que no
+  ofrecen audio descargable. Prometer poderes mágicos solo después de probarlos.
