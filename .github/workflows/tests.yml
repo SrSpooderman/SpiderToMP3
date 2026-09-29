@@ -1,0 +1,118 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ['3.12', '3.13']
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+  build-windows:
+    needs: unit-tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install build dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller==6.22.3
+      - name: Build executable
+        run: >-
+          python -m PyInstaller
+          --noconfirm --clean --onefile --windowed
+          --name SpiderToMP3
+          --collect-submodules yt_dlp
+          main.py
+      - name: Upload executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: windows-build
+          path: dist/SpiderToMP3.exe
+          if-no-files-found: error
+          retention-days: 1
+
+  build-linux:
+    needs: unit-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+          cache: pip
+      - name: Install build dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller==6.22.3
+      - name: Build executable
+        run: >-
+          python -m PyInstaller
+          --noconfirm --clean --onefile
+          --name SpiderToMP3-linux-x86_64
+          --collect-submodules yt_dlp
+          main.py
+      - name: Smoke test executable
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: |
+          set +e
+          timeout 15s dist/SpiderToMP3-linux-x86_64
+          exit_code=$?
+          test "$exit_code" -eq 124
+      - name: Upload executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-build
+          path: dist/SpiderToMP3-linux-x86_64
+          if-no-files-found: error
+          retention-days: 1
+
+  bundle:
+    needs: [build-windows, build-linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Windows executable
+        uses: actions/download-artifact@v8
+        with:
+          name: windows-build
+          path: bundle
+      - name: Download Linux executable
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-build
+          path: bundle
+      - name: Package both executables
+        run: |
+          test -f bundle/SpiderToMP3.exe
+          test -f bundle/SpiderToMP3-linux-x86_64
+          chmod +x bundle/SpiderToMP3-linux-x86_64
+          zip -j SpiderToMP3-Windows-Linux.zip bundle/SpiderToMP3.exe bundle/SpiderToMP3-linux-x86_64
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v7
+        with:
+          path: SpiderToMP3-Windows-Linux.zip
+          if-no-files-found: error
+          archive: false

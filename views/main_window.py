@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from spidertomp3.config import (
+from config import (
     APP_NAME,
     AUDIO_FORMATS,
     DEFAULT_FILENAME_TEMPLATE,
     DEFAULT_OUTPUT_DIR,
     WINDOW_TITLE,
 )
-from spidertomp3.qt import (
+from qt import (
     QApplication,
     QCheckBox,
     QComboBox,
@@ -29,7 +29,7 @@ from spidertomp3.qt import (
     Signal,
     Slot,
 )
-from spidertomp3.views.styles import APP_STYLESHEET
+from views.styles import APP_STYLESHEET
 
 
 class MainWindow(QMainWindow):
@@ -274,6 +274,7 @@ class MainWindow(QMainWindow):
         self.format_combo.setEnabled(not running)
         self.quality_slider.setEnabled(not running)
         self.playlist_check.setEnabled(not running)
+        self.open_when_done_check.setEnabled(not running)
         self.statusBar().showMessage("Descargando..." if running else "Preparado")
 
     def closeEvent(self, event) -> None:

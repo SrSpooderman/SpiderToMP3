@@ -4,8 +4,8 @@ from typing import Any, Callable, Protocol
 
 from yt_dlp import YoutubeDL
 
-from spidertomp3.models import DownloadSettings
-from spidertomp3.services.ytdlp_logger import YtdlpLogger
+from models import DownloadSettings
+from services.ytdlp_logger import YtdlpLogger
 
 ProgressHook = Callable[[dict[str, Any]], None]
 
@@ -59,6 +59,7 @@ class DownloadService:
             "ignoreerrors": False,
             "logger": YtdlpLogger(_EventLogSink(self.events)),
             "progress_hooks": [self._progress_hook(item_index, total_items)],
+            "postprocessor_hooks": [self._postprocessor_hook()],
             "postprocessors": [
                 {
                     "key": "FFmpegExtractAudio",
@@ -75,7 +76,6 @@ class DownloadService:
             self.events.emit_current_title(title)
 
             if status.get("status") == "finished":
-                self.events.emit_item_done(title)
                 self.events.emit_log(f"Listo para convertir: {title}")
                 return
 
@@ -90,6 +90,17 @@ class DownloadService:
             local_percent = min(max(downloaded / total, 0), 1)
             overall = ((item_index - 1) + local_percent) / max(total_items, 1)
             self.events.emit_progress(int(overall * 100))
+
+        return hook
+
+    def _postprocessor_hook(self) -> ProgressHook:
+        def hook(status: dict[str, Any]) -> None:
+            self._raise_if_cancelled()
+            if (
+                status.get("postprocessor") == "ExtractAudio"
+                and status.get("status") == "finished"
+            ):
+                self.events.emit_item_done(_extract_title(status))
 
         return hook
 

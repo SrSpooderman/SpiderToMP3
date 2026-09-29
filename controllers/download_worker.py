@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import traceback
 
-from spidertomp3.models import DownloadSettings
-from spidertomp3.qt import QObject, Signal, Slot
-from spidertomp3.services.download_service import DownloadCancelled, DownloadService
+from models import DownloadSettings
+from qt import QObject, Signal, Slot
+from services.download_service import DownloadCancelled, DownloadService
 
 
 class DownloadWorker(QObject):

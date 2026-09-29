@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from spidertomp3.config import APP_NAME
-from spidertomp3.controllers.download_worker import DownloadWorker
-from spidertomp3.models import DownloadSettings
-from spidertomp3.qt import QDesktopServices, QFileDialog, QMessageBox, QThread, QUrl, Slot
-from spidertomp3.services import parse_urls
+from config import APP_NAME
+from controllers.download_worker import DownloadWorker
+from models import DownloadSettings
+from qt import QDesktopServices, QFileDialog, QMessageBox, QThread, QUrl, Slot
+from services import parse_urls
 
 
 class MainController:
@@ -14,6 +14,7 @@ class MainController:
         self.window = window
         self.thread: QThread | None = None
         self.worker: DownloadWorker | None = None
+        self._close_when_finished = False
         self._connect_view()
 
     def _connect_view(self) -> None:
@@ -44,6 +45,8 @@ class MainController:
 
     @Slot()
     def start_download(self) -> None:
+        if self.is_running:
+            return
         urls = parse_urls(self.window.urls_text())
         if not urls:
             QMessageBox.information(self.window, APP_NAME, "Pega al menos un enlace para empezar.")
@@ -77,12 +80,11 @@ class MainController:
 
     @Slot(bool, str)
     def download_finished(self, success: bool, message: str) -> None:
-        self.window.set_running(False)
         self.window.set_current_message(message)
         self.window.set_status(message)
 
-        if success and self.window.open_output_dir_when_done():
-            path = Path(self.window.output_dir_text()).expanduser().resolve()
+        if success and self.worker is not None and self.worker.settings.open_output_dir_when_done:
+            path = self.worker.settings.output_dir.resolve()
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         elif not success:
             QMessageBox.warning(self.window, APP_NAME, message)
@@ -91,6 +93,10 @@ class MainController:
     def thread_finished(self) -> None:
         self.thread = None
         self.worker = None
+        if self._close_when_finished:
+            self.window.close()
+        else:
+            self.window.set_running(False)
 
     def handle_close_request(self, event) -> None:
         if not self.is_running:
@@ -109,10 +115,8 @@ class MainController:
             return
 
         self.cancel_download()
-        if self.thread is not None:
-            self.thread.quit()
-            self.thread.wait(3000)
-        event.accept()
+        self._close_when_finished = True
+        event.ignore()
 
     @property
     def is_running(self) -> bool:
