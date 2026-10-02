@@ -166,9 +166,17 @@ install -m 755 "$stage/SpiderToMP3-linux-x86_64" "$new_file"
 cp -p "$target" "$backup"
 mv -f "$new_file" "$target"
 if [ "$installed" = yes ]; then
+    icon="$HOME/.local/share/icons/hicolor/256x256/apps/spidertomp3.png"
+    mkdir -p "$(dirname -- "$icon")"
+    PYINSTALLER_RESET_ENVIRONMENT=1 QT_QPA_PLATFORM=offscreen "$target" --write-menu-icon "$icon"
+    chmod 644 "$icon"
     install -Dm644 "$stage/spidertomp3.svg" "$HOME/.local/share/icons/hicolor/scalable/apps/spidertomp3.svg"
     install -Dm644 "$stage/spidertomp3.desktop" "$HOME/.local/share/applications/spidertomp3.desktop"
-    sed -i "s|^Exec=.*|Exec=$target|" "$HOME/.local/share/applications/spidertomp3.desktop"
+    sed -i "s|^Exec=.*|Exec=\\\"$target\\\"|" "$HOME/.local/share/applications/spidertomp3.desktop"
+    sed -i "s|^Icon=.*|Icon=$icon|" "$HOME/.local/share/applications/spidertomp3.desktop"
+    if command -v kbuildsycoca6 >/dev/null 2>&1; then
+        env -u LC_ALL kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+    fi
 fi
 PYINSTALLER_RESET_ENVIRONMENT=1 "$target" >/dev/null 2>&1 &
 rm -rf -- "$stage"

@@ -42,7 +42,7 @@ comprueba su tamaño y su SHA-256 con `SHA256SUMS`, cierra la ventana, sustituye
 el ejecutable y abre la nueva versión. Durante la descarga puedes cancelar.
 Si hay una conversión en curso, termina o cancélala antes de actualizar.
 
-En Bazzite se actualiza el ejecutable de `~/.local/bin` instalado por el script,
+En Linux se actualiza el ejecutable de `~/.local/bin` instalado por el script,
 o el binario portable desde la carpeta donde se ejecutó. En Windows se sustituye
 el `.exe` portable en su carpeta. Necesitas permiso de escritura en esa carpeta;
 si no lo tienes, descarga la Release e instálala manualmente. Se deja una copia
@@ -80,32 +80,40 @@ el código por sí solo no la publica.
 En **Releases** de este repositorio, cada versión tendrá tres descargas separadas:
 
 - `SpiderToMP3-vX.Y.Z-windows-x86_64.exe` para Windows.
-- `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz` con el ejecutable e instalador de Bazzite.
+- `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz` con el ejecutable e instalador de Linux.
 - `SHA256SUMS` para comprobar ambas descargas.
 
 Las compilaciones de ramas y pull requests dejan los ejecutables de prueba en
 **Actions → Tests → Artifacts** durante un día. Las versiones para usuarios se
 descargan desde **Releases**.
 
-En Bazzite, extrae el paquete Linux y ejecuta el instalador para tu usuario:
+### Bazzite, Ubuntu y Fedora
+
+En Bazzite, Ubuntu (24.04 o posterior) y Fedora para x86_64, extrae el paquete
+Linux y ejecuta el mismo instalador para tu usuario:
 
 ```bash
 tar -xzf SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz
 sh install-bazzite.sh
 ```
 
-Después abre **SpiderToMP3** desde el menú. También puedes ejecutar el binario
+El nombre `install-bazzite.sh` se conserva para que las versiones anteriores
+puedan actualizarse. El script instala un icono PNG para el menú y actualiza
+la caché de aplicaciones en KDE cuando está disponible. Si actualizas desde
+una versión anterior, la app también corrige el icono al abrirse. Después abre
+**SpiderToMP3** desde el menú. También puedes ejecutar el binario
 sin instalarlo con `chmod +x SpiderToMP3-linux-x86_64` y
 `./SpiderToMP3-linux-x86_64`.
 La elección de formato para Bazzite se explica en
 [packaging/OPTIONS.md](packaging/OPTIONS.md).
 
-El binario Linux se construye en Ubuntu 24.04 para equipos x86_64. Ambos
+El binario Linux se construye en Ubuntu 24.04 para equipos x86_64; la
+compatibilidad con Fedora debe comprobarse en una instalación real. Ambos
 ejecutables incluyen Python y las dependencias de la app, pero necesitan FFmpeg
-disponible en el `PATH` del sistema (`command -v ffmpeg` en Bazzite).
+disponible en el `PATH` del sistema (`command -v ffmpeg`).
 
 Para volver a una versión anterior, descarga sus archivos desde esa Release y
-ejecuta de nuevo el instalador de Bazzite, o usa su `.exe` en Windows.
+ejecuta de nuevo el instalador de Linux, o usa su `.exe` en Windows.
 
 La app guarda la carpeta, formato, calidad y hasta 20 enlaces recientes en las
 preferencias del usuario. El botón **Borrar historial** elimina esos enlaces.

@@ -3,6 +3,12 @@
 Cada versión publicada tiene aquí sus notas. La etiqueta Git `vX.Y.Z` debe
 coincidir con `APP_VERSION` en `config.py`.
 
+## [0.2.1]
+
+- Corrige el icono de SpiderToMP3 en el menú de KDE: instala un PNG y reconstruye la caché de aplicaciones con el idioma de la sesión.
+- Repara el lanzador al abrir la nueva versión si se actualizó desde un instalador anterior.
+- Documenta el mismo instalador de usuario para Bazzite, Ubuntu y Fedora.
+
 ## [0.2.0]
 
 - Avisa al iniciar el ejecutable cuando hay una Release estable nueva y permite buscarla desde Ayuda.

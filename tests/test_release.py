@@ -61,7 +61,9 @@ class ReleaseAssetsTests(unittest.TestCase):
             inputs = root / "inputs"
             inputs.mkdir()
             (inputs / "SpiderToMP3.exe").write_bytes(b"windows")
-            (inputs / "SpiderToMP3-linux-x86_64").write_bytes(b"linux")
+            linux_binary = (b'#!/bin/sh\n'
+                            b'if [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n')
+            (inputs / "SpiderToMP3-linux-x86_64").write_bytes(linux_binary)
             output = root / "release"
             prepare(inputs, output)
             package = root / "package"
@@ -76,7 +78,8 @@ class ReleaseAssetsTests(unittest.TestCase):
                            env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
                            capture_output=True)
             self.assertEqual((install_home / ".local/bin/SpiderToMP3-linux-x86_64").read_bytes(),
-                             b"linux")
+                             linux_binary)
+            self.assertTrue((install_home / ".local/share/icons/hicolor/256x256/apps/spidertomp3.png").is_file())
 
 
 if __name__ == "__main__":

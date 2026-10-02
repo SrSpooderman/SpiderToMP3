@@ -1,7 +1,7 @@
 # TODO de SpiderToMP3
 
-Punto de partida: `v0.1.2` publica ejecutables para Windows y Linux; `v0.2.0`
-prepara la actualización automática para su próxima Release. La app
+Punto de partida: `v0.2.1` corrige el icono del menú en Linux y `v0.2.0`
+introduce la actualización automática. La app
 descarga por lotes, permite cancelar y reintentar fallos, y guarda preferencias.
 Aquí van **solo tareas pendientes**, ordenadas por impacto. Cada casilla describe
 un resultado comprobable; el spider ya tiene bastante con contar patas.

@@ -108,6 +108,36 @@ class UpdaterTests(unittest.TestCase):
             self.assertEqual(target.read_text(), "#!/bin/sh\nexit 0\n")
             self.assertEqual((root / (target.name + ".previous")).read_text(), "old")
 
+    @unittest.skipUnless(os.name == "posix", "Requiere Linux/POSIX")
+    def test_auxiliar_linux_regenera_icono_del_menu(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            stage = root / "stage"
+            stage.mkdir()
+            target = root / ".local/bin/SpiderToMP3-linux-x86_64"
+            target.parent.mkdir(parents=True)
+            target.write_text("old")
+            (stage / target.name).write_text(
+                '#!/bin/sh\nif [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n'
+            )
+            project = Path(__file__).resolve().parents[1]
+            (stage / "spidertomp3.svg").write_bytes(
+                (project / "assets/spidertomp3-icon.svg").read_bytes()
+            )
+            (stage / "spidertomp3.desktop").write_bytes(
+                (project / "packaging/spidertomp3.desktop").read_bytes()
+            )
+            helper = root / "apply-update.sh"
+            helper.write_text(LINUX_HELPER)
+            subprocess.run(["/bin/sh", str(helper), "999999999", str(stage), str(target), "yes"],
+                           check=True, capture_output=True, timeout=10,
+                           env={**os.environ, "HOME": str(root)})
+            icon = root / ".local/share/icons/hicolor/256x256/apps/spidertomp3.png"
+            launcher = root / ".local/share/applications/spidertomp3.desktop"
+            self.assertEqual(icon.read_bytes(), b"png")
+            self.assertIn(f"Icon={icon}", launcher.read_text())
+            self.assertIn(f'Exec="{target}"', launcher.read_text())
+
     def test_consulta_asincrona_informa_si_esta_actualizado(self):
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         from controllers.update_controller import UpdateController

@@ -2,9 +2,12 @@
 
 La distribución actual es un `tar.gz` para Linux publicado como archivo propio
 en cada GitHub Release, junto al ejecutable de Windows por separado. Contiene
-binario Linux, icono, archivo `.desktop` e instalador de usuario.
-`install-bazzite.sh` copia estos archivos a `~/.local`
-sin modificar la imagen base del sistema. FFmpeg se usa desde el `PATH` del host.
+binario Linux, icono SVG, archivo `.desktop` e instalador de usuario.
+`install-bazzite.sh` funciona también en Ubuntu y Fedora: copia los archivos a
+`~/.local`, genera un PNG para el menú desde el ejecutable y actualiza la caché
+de KDE si está disponible, sin modificar la imagen base del sistema. El nombre
+del script se conserva por compatibilidad con el actualizador de versiones
+anteriores. FFmpeg se usa desde el `PATH` del host.
 
 Se consideraron estas alternativas:
 

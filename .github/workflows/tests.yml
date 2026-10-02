@@ -138,6 +138,8 @@ jobs:
           QT_QPA_PLATFORM: offscreen
         run: |
           timeout 60s dist/SpiderToMP3-linux-x86_64 --smoke-test
+          timeout 60s dist/SpiderToMP3-linux-x86_64 --write-menu-icon "$RUNNER_TEMP/spidertomp3.png"
+          file "$RUNNER_TEMP/spidertomp3.png" | grep 'PNG image data, 256 x 256'
           test "$(dist/SpiderToMP3-linux-x86_64 --version)" = "SpiderToMP3 ${{ needs.version.outputs.app_version }}"
       - name: Test Linux worker communication
         run: python -m scripts.smoke_frozen_worker dist/SpiderToMP3-linux-x86_64
@@ -184,6 +186,7 @@ jobs:
           tar -xzf "release/SpiderToMP3-v${APP_VERSION}-linux-x86_64.tar.gz" -C package-check
           SPIDER_INSTALL_HOME="$RUNNER_TEMP/spider-home" sh package-check/install-bazzite.sh
           test -x "$RUNNER_TEMP/spider-home/.local/bin/SpiderToMP3-linux-x86_64"
+          test -s "$RUNNER_TEMP/spider-home/.local/share/icons/hicolor/256x256/apps/spidertomp3.png"
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}

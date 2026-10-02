@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 APP_NAME = "SpiderToMP3"
-APP_VERSION = "0.2.0"
+APP_VERSION = "0.2.1"
 WINDOW_TITLE = f"{APP_NAME} {APP_VERSION} - baja canciones sin drama"
 DEFAULT_FILENAME_TEMPLATE = "%(title).120s [%(id)s].%(ext)s"
 DEFAULT_OUTPUT_DIR = Path.home() / "Music" / APP_NAME
