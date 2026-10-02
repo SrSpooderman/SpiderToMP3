@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>SpiderToMP3</title>
+  <rect width="128" height="128" rx="26" fill="#142b33"/>
+
+  <g fill="none" stroke="#d9e7e4" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M49 64 35 56 24 58M46 72 31 71 19 77M46 81 32 87 23 98M51 89 41 103 40 110"/>
+    <path d="M79 64 93 56 104 58M82 72 97 71 109 77M82 81 96 87 105 98M77 89 87 103 88 110"/>
+  </g>
+
+  <ellipse cx="64" cy="77" rx="21" ry="26" fill="#d9e7e4"/>
+  <circle cx="64" cy="51" r="14" fill="#d9e7e4"/>
+
+  <path d="M42 56v-8c0-15 9-25 22-25s22 10 22 25v8" fill="none" stroke="#55c6b3" stroke-width="7" stroke-linecap="round"/>
+  <rect x="35" y="49" width="12" height="21" rx="5" fill="#55c6b3"/>
+  <rect x="81" y="49" width="12" height="21" rx="5" fill="#55c6b3"/>
+  <path d="M40 55v9M88 55v9" stroke="#142b33" stroke-width="3" stroke-linecap="round"/>
+
+  <g stroke="#142b33" stroke-width="4" stroke-linecap="round">
+    <path d="M56 78v5M64 73v15M72 78v5"/>
+  </g>
+</svg>

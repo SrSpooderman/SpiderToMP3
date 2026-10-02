@@ -15,7 +15,7 @@ LINUX_CONTENTS = {
     "SpiderToMP3-linux-x86_64": (None, 0o755),
     "install-bazzite.sh": (ROOT / "packaging" / "install-bazzite.sh", 0o755),
     "spidertomp3.desktop": (ROOT / "packaging" / "spidertomp3.desktop", 0o644),
-    "spidertomp3.svg": (ROOT / "assets" / "spidertomp3.svg", 0o644),
+    "spidertomp3.svg": (ROOT / "assets" / "spidertomp3-icon.svg", 0o644),
 }
 
 

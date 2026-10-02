@@ -16,7 +16,7 @@ class BazziteInstallerTests(unittest.TestCase):
             bundle.mkdir()
             (bundle / "SpiderToMP3-linux-x86_64").write_bytes(b"binary")
             for name, source in (
-                ("spidertomp3.svg", project / "assets" / "spidertomp3.svg"),
+                ("spidertomp3.svg", project / "assets" / "spidertomp3-icon.svg"),
                 ("spidertomp3.desktop", project / "packaging" / "spidertomp3.desktop"),
             ):
                 shutil.copyfile(source, bundle / name)

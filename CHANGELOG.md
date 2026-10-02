@@ -8,6 +8,7 @@ coincidir con `APP_VERSION` en `config.py`.
 - Avisa al iniciar el ejecutable cuando hay una Release estable nueva y permite buscarla desde Ayuda.
 - Descarga la versión de Windows o Linux, comprueba SHA-256 y actualiza el ejecutable tras cerrar la app.
 - Permite cancelar la descarga de actualización y conserva una copia de la versión anterior.
+- Estrena un icono SVG de araña con auriculares, incluido también en el ejecutable de Windows.
 
 ## [0.1.2]
 

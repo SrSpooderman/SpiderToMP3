@@ -81,8 +81,9 @@ jobs:
           --noconfirm --clean --onefile --windowed
           --name SpiderToMP3
           --version-file version-info.txt
+          --icon=assets/spidertomp3-icon.ico
           --collect-submodules yt_dlp
-          --add-data=assets/spidertomp3.svg:assets
+          --add-data=assets/spidertomp3-icon.svg:assets
           main.py
       - name: Smoke test Windows executable
         timeout-minutes: 2
@@ -130,7 +131,7 @@ jobs:
           --noconfirm --clean --onefile
           --name SpiderToMP3-linux-x86_64
           --collect-submodules yt_dlp
-          --add-data=assets/spidertomp3.svg:assets
+          --add-data=assets/spidertomp3-icon.svg:assets
           main.py
       - name: Smoke test executable
         env:

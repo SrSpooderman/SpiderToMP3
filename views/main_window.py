@@ -57,7 +57,7 @@ class MainWindow(QMainWindow):
         self._queue_items: dict[str, QListWidgetItem] = {}
         self.setWindowTitle(WINDOW_TITLE)
         asset_root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[1]))
-        self.setWindowIcon(QIcon(str(asset_root / "assets" / "spidertomp3.svg")))
+        self.setWindowIcon(QIcon(str(asset_root / "assets" / "spidertomp3-icon.svg")))
         self.resize(980, 680)
         self.setMinimumSize(760, 540)
 
