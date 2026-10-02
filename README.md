@@ -33,6 +33,26 @@ python main.py
 Para consultar la versión desde el código fuente: `python main.py --version`.
 La ventana también la muestra en **Ayuda → Acerca de SpiderToMP3**.
 
+## Actualizaciones
+
+El ejecutable comprueba una vez al día si hay una nueva Release estable y avisa
+con la versión y sus notas. También puedes usar **Ayuda → Buscar actualizaciones**.
+Solo se instala si pulsas **Actualizar**: la app descarga el archivo de tu sistema,
+comprueba su tamaño y su SHA-256 con `SHA256SUMS`, cierra la ventana, sustituye
+el ejecutable y abre la nueva versión. Durante la descarga puedes cancelar.
+Si hay una conversión en curso, termina o cancélala antes de actualizar.
+
+En Bazzite se actualiza el ejecutable de `~/.local/bin` instalado por el script,
+o el binario portable desde la carpeta donde se ejecutó. En Windows se sustituye
+el `.exe` portable en su carpeta. Necesitas permiso de escritura en esa carpeta;
+si no lo tienes, descarga la Release e instálala manualmente. Se deja una copia
+del ejecutable anterior con el sufijo `.previous` (Windows añade un número).
+Al ejecutar desde el código fuente, **Buscar actualizaciones** abre la página de
+la Release para que puedas actualizar el repositorio por tu cuenta.
+
+Esta función llega con `v0.2.0`: las versiones anteriores no pueden ofrecer el
+aviso y deben actualizarse manualmente la primera vez.
+
 Los módulos de la aplicación (`controllers/`, `models/`, `services/` y `views/`)
 están en la raíz del repositorio. Escribe uno o varios enlaces, elige la carpeta
 de salida y el formato, y pulsa **Descargar**.
@@ -54,7 +74,7 @@ La versión se define una sola vez en `APP_VERSION` de `config.py`. Seguimos
 respectivamente. Antes de publicar una versión, añade sus notas a
 [CHANGELOG.md](CHANGELOG.md) y crea una etiqueta Git `vX.Y.Z` que coincida con
 `APP_VERSION`. El workflow verifica la coincidencia, prueba ambos sistemas y
-publica una GitHub Release. La primera Release se publicará al crear su etiqueta;
+publica una GitHub Release. Cada publicación se inicia al crear su etiqueta;
 el código por sí solo no la publica.
 
 En **Releases** de este repositorio, cada versión tendrá tres descargas separadas:

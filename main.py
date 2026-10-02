@@ -8,6 +8,7 @@ from config import APP_NAME, APP_VERSION
 
 def main(smoke_test: bool = False) -> int:
     from controllers import MainController
+    from controllers.update_controller import UpdateController
     from qt import QApplication, QTimer
     from views.main_window import MainWindow
 
@@ -16,9 +17,12 @@ def main(smoke_test: bool = False) -> int:
     app.setApplicationVersion(APP_VERSION)
     window = MainWindow()
     window.controller = MainController(window)
+    window.update_controller = UpdateController(window, window.controller)
     window.show()
     if smoke_test:
         QTimer.singleShot(0, app.quit)
+    else:
+        window.update_controller.start_auto_check()
     return app.exec()
 
 

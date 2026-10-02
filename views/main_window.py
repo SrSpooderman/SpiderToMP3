@@ -49,6 +49,7 @@ class MainWindow(QMainWindow):
     output_dir_requested = Signal()
     retry_requested = Signal()
     close_requested = Signal(object)
+    check_updates_requested = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -255,9 +256,13 @@ class MainWindow(QMainWindow):
         self.copy_log_button.clicked.connect(self.copy_log)
 
     def _build_menu(self) -> None:
+        check_updates = QAction("Buscar actualizaciones", self)
+        check_updates.triggered.connect(self.check_updates_requested.emit)
         about = QAction("Acerca de SpiderToMP3", self)
         about.triggered.connect(self._show_about)
-        self.menuBar().addMenu("Ayuda").addAction(about)
+        help_menu = self.menuBar().addMenu("Ayuda")
+        help_menu.addAction(check_updates)
+        help_menu.addAction(about)
 
     def _show_about(self) -> None:
         QMessageBox.about(

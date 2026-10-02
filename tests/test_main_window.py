@@ -79,8 +79,12 @@ class MainWindowTests(unittest.TestCase):
             window.copy_log_button.click()
             self.assertIn("Línea 1004", self.app.clipboard().text())
             with patch("views.main_window.QMessageBox.about") as about:
-                window.menuBar().actions()[0].menu().actions()[0].trigger()
+                window.menuBar().actions()[0].menu().actions()[1].trigger()
             self.assertIn(APP_VERSION, about.call_args.args[2])
+            requested = []
+            window.check_updates_requested.connect(lambda: requested.append(True))
+            window.menuBar().actions()[0].menu().actions()[0].trigger()
+            self.assertEqual(requested, [True])
             window.close()
 
 
