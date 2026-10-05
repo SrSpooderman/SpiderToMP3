@@ -162,9 +162,26 @@ while kill -0 "$old_pid" 2>/dev/null; do
 done
 new_file="${target}.new.$$"
 backup="${target}.previous"
+installed_new=no
+cleanup() {
+    if [ "$installed_new" != yes ] && [ -f "$backup" ]; then
+        cp -p "$backup" "$target" || true
+        printf '%s\\n' 'La actualización falló al iniciar. Se restauró la versión anterior.' > "${target}.update-error" || true
+        if command -v notify-send >/dev/null 2>&1; then
+            notify-send 'SpiderToMP3' 'La actualización falló. Se restauró la versión anterior.' || true
+        fi
+        PYINSTALLER_RESET_ENVIRONMENT=1 "$target" >/dev/null 2>&1 &
+    fi
+    rm -f -- "$new_file"
+    rm -rf -- "$stage"
+}
+trap cleanup EXIT
 install -m 755 "$stage/SpiderToMP3-linux-x86_64" "$new_file"
 cp -p "$target" "$backup"
 mv -f "$new_file" "$target"
+if ! PYINSTALLER_RESET_ENVIRONMENT=1 QT_QPA_PLATFORM=offscreen "$target" --smoke-test >/dev/null 2>&1; then
+    exit 1
+fi
 if [ "$installed" = yes ]; then
     icon="$HOME/.local/share/icons/hicolor/256x256/apps/spidertomp3.png"
     mkdir -p "$(dirname -- "$icon")"
@@ -178,8 +195,8 @@ if [ "$installed" = yes ]; then
         env -u LC_ALL kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
     fi
 fi
+installed_new=yes
 PYINSTALLER_RESET_ENVIRONMENT=1 "$target" >/dev/null 2>&1 &
-rm -rf -- "$stage"
 """
 
 
@@ -192,6 +209,7 @@ $ErrorActionPreference = 'Stop'
 try { Wait-Process -Id $OldPid -Timeout 60 -ErrorAction SilentlyContinue } catch {}
 $backup = "$Target.previous.$PID"
 $pending = "$Target.new.$PID"
+$smokeFailed = $false
 for ($attempt = 0; $attempt -lt 120; $attempt++) {
     try {
         Copy-Item -LiteralPath $Staged -Destination $pending -Force
@@ -199,6 +217,10 @@ for ($attempt = 0; $attempt -lt 120; $attempt++) {
         Move-Item -LiteralPath $Target -Destination $backup
         Move-Item -LiteralPath $pending -Destination $Target
         $env:PYINSTALLER_RESET_ENVIRONMENT = '1'
+        $env:QT_QPA_PLATFORM = 'offscreen'
+        $check = Start-Process -FilePath $Target -ArgumentList '--smoke-test' -Wait -PassThru
+        if ($check.ExitCode -ne 0) { $smokeFailed = $true; throw 'La nueva versión no pudo iniciarse' }
+        Remove-Item Env:QT_QPA_PLATFORM -ErrorAction SilentlyContinue
         Start-Process -FilePath $Target
         Remove-Item -LiteralPath $Staged -Force -ErrorAction SilentlyContinue
         exit 0
@@ -208,6 +230,15 @@ for ($attempt = 0; $attempt -lt 120; $attempt++) {
             Move-Item -LiteralPath $backup -Destination $Target -Force -ErrorAction SilentlyContinue
         }
         Remove-Item -LiteralPath $pending -Force -ErrorAction SilentlyContinue
+        if ($smokeFailed) {
+            Set-Content -LiteralPath "$Target.update-error" -Value 'La actualización falló al iniciar. Se restauró la versión anterior.' -Encoding UTF8
+            try {
+                Add-Type -AssemblyName PresentationFramework
+                [System.Windows.MessageBox]::Show('La actualización falló. Se restauró la versión anterior.', 'SpiderToMP3') | Out-Null
+            } catch {}
+            Start-Process -FilePath $Target -ErrorAction SilentlyContinue
+            exit 1
+        }
         Start-Sleep -Milliseconds 500
     }
 }

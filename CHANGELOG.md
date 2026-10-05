@@ -3,6 +3,15 @@
 Cada versión publicada tiene aquí sus notas. La etiqueta Git `vX.Y.Z` debe
 coincidir con `APP_VERSION` en `config.py`.
 
+## [0.3.0]
+
+- Añade vista previa con selección y orden de audios, límite configurable de listas y reanudación de la cola.
+- Muestra avance por audio y permite controlar duplicados, reintentos y un registro opcional de IDs descargados.
+- Añade pegado y arrastre de enlaces, acciones sobre archivos, informes de errores y temas accesibles.
+- Oculta datos sensibles en el registro y permite desactivar o borrar el historial guardado.
+- Verifica el audio final antes de marcarlo completado y restaura el ejecutable anterior si la actualización no arranca.
+- Amplía las pruebas de los ejecutables con una conversión real desde HTTP local y publica un desinstalador de Linux.
+
 ## [0.2.1]
 
 - Corrige el icono de SpiderToMP3 en el menú de KDE: instala un PNG y reconstruye la caché de aplicaciones con el idioma de la sesión.

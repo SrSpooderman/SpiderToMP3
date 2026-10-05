@@ -25,6 +25,9 @@ def validate_settings(settings: DownloadSettings) -> dict[str, str]:
         if not valid:
             errors["urls"] = f"El enlace {index} no es una URL HTTP o HTTPS válida."
             break
+        if parsed.hostname in {"spotify.com", "open.spotify.com", "www.spotify.com"}:
+            errors["urls"] = "Los enlaces de Spotify no contienen audio descargable en esta aplicación."
+            break
 
     template = settings.filename_template.strip()
     if not template:
@@ -39,6 +42,13 @@ def validate_settings(settings: DownloadSettings) -> dict[str, str]:
         errors["format"] = "El formato de audio no es válido."
     elif settings.audio_quality not in {quality for _, quality in QUALITY_OPTIONS[settings.audio_format]}:
         errors["format"] = "La calidad elegida no corresponde al formato."
+
+    if not 1 <= settings.playlist_limit <= 5000:
+        errors["playlist_limit"] = "El límite de la lista debe estar entre 1 y 5000."
+    if not 1 <= settings.network_attempts <= 5:
+        errors["network_attempts"] = "Los intentos deben estar entre 1 y 5."
+    if settings.duplicate_policy not in {"skip", "rename", "ask"}:
+        errors["duplicate_policy"] = "La opción para duplicados no es válida."
 
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         errors["ffmpeg"] = "Instala FFmpeg y ffprobe y añádelos al PATH."

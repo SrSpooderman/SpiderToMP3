@@ -33,6 +33,20 @@ python main.py
 Para consultar la versión desde el código fuente: `python main.py --version`.
 La ventana también la muestra en **Ayuda → Acerca de SpiderToMP3**.
 
+## Enlaces compatibles
+
+Se aceptan enlaces HTTP y HTTPS que `yt-dlp` pueda analizar. Una URL directa a
+un archivo WAV público se usa en las pruebas automáticas; también se pueden
+probar enlaces públicos de vídeo o listas de YouTube. El soporte de cada sitio
+depende de la versión de `yt-dlp` incluida y puede cambiar cuando cambia el
+sitio. Si un enlace deja de funcionar, comprueba primero que se abre en el
+navegador, que no exige iniciar sesión y que la aplicación está actualizada.
+
+Los enlaces de Spotify se rechazan con un mensaje claro: no contienen el audio
+descargable para esta aplicación. Si falta FFmpeg o `ffprobe`, hay que instalarlos
+y asegurarse de que ambos aparecen en el `PATH`. Un archivo existente nunca se
+sobrescribe automáticamente.
+
 ## Actualizaciones
 
 El ejecutable comprueba una vez al día si hay una nueva Release estable y avisa
@@ -54,8 +68,35 @@ Esta función llega con `v0.2.0`: las versiones anteriores no pueden ofrecer el
 aviso y deben actualizarse manualmente la primera vez.
 
 Los módulos de la aplicación (`controllers/`, `models/`, `services/` y `views/`)
-están en la raíz del repositorio. Escribe uno o varios enlaces, elige la carpeta
-de salida y el formato, y pulsa **Descargar**.
+están en la raíz del repositorio. Escribe enlaces, elige la carpeta y el formato,
+y pulsa **Descargar**. La app analiza los enlaces y muestra una vista previa:
+desmarca audios o cambia su orden antes de confirmar. El límite inicial de cada
+lista es 200 audios y se puede ajustar en la ventana.
+
+Durante la descarga, la cola muestra el avance por audio, la velocidad y el
+tiempo estimado si la fuente los proporciona. La conversión se indica por
+separado. Puedes cancelar, reanudar pendientes, reintentar fallidos o el audio
+seleccionado, quitar elementos y abrir el archivo o su carpeta al terminar.
+También puedes usar **Pegar enlaces** (`Ctrl+Mayús+V`) o soltar URLs y archivos
+`.txt` en la ventana. La cola se guarda para reanudarla tras un cierre; desmarca
+**Guardar historial y sesión** si no quieres conservar enlaces, y usa **Borrar
+historial** para eliminar los ya guardados.
+
+En **Duplicados**, **Omitir** es la opción inicial; **Renombrar** crea un nombre
+libre y **Preguntar** pide una decisión al detectar un archivo existente en la
+vista previa. Si el nombre final cambia después del análisis, la app avisa y no
+sobrescribe. **Omitir ID ya descargados** crea un registro opcional en la carpeta
+de salida para no repetir audios aunque cambies el patrón de nombre. Los fallos
+temporales de red se reintentan con una espera breve; el número de intentos es
+configurable.
+
+El registro visible, el portapapeles y el informe exportado ocultan parámetros
+de URL, credenciales comunes y la ruta de la carpeta personal. Los enlaces
+guardados en preferencias siguen siendo completos para permitir reanudar; usa
+la opción de historial si no quieres guardarlos. **Limpiar restos** ofrece borrar
+solo archivos parciales identificados como nuevos de la sesión y pide confirmación.
+Hay temas claro, oscuro y de alto contraste; **Sistema** sigue la preferencia
+de apariencia del escritorio.
 
 ## Pruebas
 
@@ -77,11 +118,12 @@ respectivamente. Antes de publicar una versión, añade sus notas a
 publica una GitHub Release. Cada publicación se inicia al crear su etiqueta;
 el código por sí solo no la publica.
 
-En **Releases** de este repositorio, cada versión tendrá tres descargas separadas:
+En **Releases** de este repositorio, cada versión tendrá cuatro descargas separadas:
 
 - `SpiderToMP3-vX.Y.Z-windows-x86_64.exe` para Windows.
 - `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz` con el ejecutable e instalador de Linux.
-- `SHA256SUMS` para comprobar ambas descargas.
+- `SHA256SUMS` para comprobar ambas descargas y el desinstalador.
+- `uninstall-bazzite.sh` para quitar la instalación de usuario en Linux.
 
 Las compilaciones de ramas y pull requests dejan los ejecutables de prueba en
 **Actions → Tests → Artifacts** durante un día. Las versiones para usuarios se
@@ -97,6 +139,10 @@ tar -xzf SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz
 sh install-bazzite.sh
 ```
 
+Para desinstalar, descarga `uninstall-bazzite.sh` de la misma Release y ejecuta
+`sh uninstall-bazzite.sh`. Solo borra el binario, el lanzador y los iconos que
+instala en `~/.local`; conserva las preferencias y los audios descargados.
+
 El nombre `install-bazzite.sh` se conserva para que las versiones anteriores
 puedan actualizarse. El script instala un icono PNG para el menú y actualiza
 la caché de aplicaciones en KDE cuando está disponible. Si actualizas desde
@@ -111,17 +157,16 @@ El binario Linux se construye en Ubuntu 24.04 para equipos x86_64; la
 compatibilidad con Fedora debe comprobarse en una instalación real. Ambos
 ejecutables incluyen Python y las dependencias de la app, pero necesitan FFmpeg
 disponible en el `PATH` del sistema (`command -v ffmpeg`).
+Comprueba también `command -v ffprobe`. En Bazzite hace falta que ambos comandos
+sean visibles para el ejecutable desde la sesión gráfica; la prueba en una
+instalación limpia de Bazzite sigue pendiente.
 
 Para volver a una versión anterior, descarga sus archivos desde esa Release y
 ejecuta de nuevo el instalador de Linux, o usa su `.exe` en Windows.
 
-La app guarda la carpeta, formato, calidad y hasta 20 enlaces recientes en las
-preferencias del usuario. El botón **Borrar historial** elimina esos enlaces.
-Los enlaces deben ser HTTP o HTTPS; se admiten comas dentro de una URL. El
-nombre por defecto incluye el identificador del audio para evitar colisiones.
-Si el archivo de salida ya existe, se informa del fallo y no se sobrescribe.
-El registro de pantalla conserva las últimas 1000 líneas y se puede copiar con
-**Copiar registro**.
+La app guarda la carpeta, formato, calidad y hasta 20 enlaces recientes cuando
+el historial está activado. Los enlaces deben ser HTTP o HTTPS; se admiten comas
+dentro de una URL. El registro de pantalla conserva las últimas 1000 líneas.
 
 ## Próximas mejoras
 

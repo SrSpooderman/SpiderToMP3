@@ -109,6 +109,25 @@ class UpdaterTests(unittest.TestCase):
             self.assertEqual((root / (target.name + ".previous")).read_text(), "old")
 
     @unittest.skipUnless(os.name == "posix", "Requiere Linux/POSIX")
+    def test_auxiliar_linux_restaura_si_nueva_version_no_arranca(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            stage = root / "stage"
+            stage.mkdir()
+            target = root / "SpiderToMP3-linux-x86_64"
+            target.write_text("old")
+            (stage / target.name).write_text("#!/bin/sh\nexit 1\n")
+            helper = root / "apply-update.sh"
+            helper.write_text(LINUX_HELPER)
+            result = subprocess.run(
+                ["/bin/sh", str(helper), "999999999", str(stage), str(target), "no"],
+                capture_output=True, timeout=10,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(target.read_text(), "old")
+            self.assertIn("restauró", (root / (target.name + ".update-error")).read_text())
+
+    @unittest.skipUnless(os.name == "posix", "Requiere Linux/POSIX")
     def test_auxiliar_linux_regenera_icono_del_menu(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)

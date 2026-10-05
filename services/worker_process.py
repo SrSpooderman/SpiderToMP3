@@ -26,6 +26,11 @@ def settings_to_payload(settings: DownloadSettings) -> dict[str, Any]:
              "expected_id": request.expected_id}
             for request in settings.retry_requests
         ],
+        "preview_only": settings.preview_only,
+        "playlist_limit": settings.playlist_limit,
+        "network_attempts": settings.network_attempts,
+        "duplicate_policy": settings.duplicate_policy,
+        "archive_enabled": settings.archive_enabled,
     }
 
 
@@ -43,6 +48,11 @@ def settings_from_payload(payload: dict[str, Any]) -> DownloadSettings:
                             item.get("expected_id"))
             for item in payload.get("retry_requests", [])
         ],
+        preview_only=bool(payload.get("preview_only", False)),
+        playlist_limit=int(payload.get("playlist_limit", 200)),
+        network_attempts=int(payload.get("network_attempts", 2)),
+        duplicate_policy=str(payload.get("duplicate_policy", "skip")),
+        archive_enabled=bool(payload.get("archive_enabled", False)),
     )
 
 
@@ -69,6 +79,12 @@ class SocketEvents:
     def should_cancel(self) -> bool:
         return False
 
+    def ask_duplicate(self, path: Path) -> str:
+        self._send("duplicate_question", str(path))
+        with self.connection.makefile("r", encoding="utf-8") as reader:
+            answer = json.loads(reader.readline())
+        return str(answer.get("decision", "cancel"))
+
 
 def main() -> int:
     if sys.stdout is None:
@@ -93,6 +109,8 @@ def main() -> int:
             events._send("finished", False, str(exc) or "Error durante la descarga.")
             return 1
 
-        message = f"Finalizado: {summary.completed} completados, {summary.failed} fallidos."
+        message = (f"Vista previa: {summary.failed} enlaces fallidos."
+                   if settings.preview_only else
+                   f"Finalizado: {summary.completed} completados, {summary.skipped} omitidos, {summary.failed} fallidos.")
         events._send("finished", summary.failed == 0, message)
         return 0 if summary.failed == 0 else 1

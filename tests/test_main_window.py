@@ -3,12 +3,13 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from PySide6.QtTest import QTest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from config import APP_VERSION
 from models import DownloadRequest
-from qt import QApplication, QLabel, QSettings
+from qt import QApplication, QLabel, QListWidget, QMessageBox, QSettings, QTimer, Qt
 from views.main_window import MainWindow
 
 
@@ -85,6 +86,103 @@ class MainWindowTests(unittest.TestCase):
             window.check_updates_requested.connect(lambda: requested.append(True))
             window.menuBar().actions()[0].menu().actions()[0].trigger()
             self.assertEqual(requested, [True])
+            window.close()
+
+    def test_queue_restores_pending_without_repeating_completed_and_can_clear_history(self):
+        with tempfile.TemporaryDirectory() as temp:
+            settings = QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat)
+            with patch("views.main_window.QSettings", return_value=settings):
+                window = MainWindow()
+                window.update_item("0", "Hecho", "completado", {"url": "https://example.test/a", "path": str(Path(temp) / "a.mp3")})
+                window.update_item("1", "En curso", "descargando", {"url": "https://example.test/b"})
+                window.close()
+                restored = MainWindow()
+                self.assertEqual(restored.queue_list.count(), 2)
+                self.assertEqual(restored.pending_requests(), [DownloadRequest("https://example.test/b")])
+                restored.clear_history()
+                restored.close()
+                empty = MainWindow()
+                self.assertEqual(empty.queue_list.count(), 0)
+                empty.close()
+
+    def test_copy_log_and_queue_hide_url_secrets(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch("views.main_window.QSettings", return_value=QSettings(
+                str(Path(temp) / "settings.ini"), QSettings.IniFormat
+            )):
+                window = MainWindow()
+            secret_url = "https://example.test/audio?token=secret123"
+            window.append_log(f"Error con {secret_url}")
+            window.update_item("0", secret_url, "fallido", {"url": secret_url, "error": secret_url})
+            window.copy_log()
+            self.assertNotIn("secret123", self.app.clipboard().text())
+            self.assertNotIn("secret123", window.queue_list.item(0).text())
+            window.close()
+
+    def test_preview_can_deselect_items_and_queue_can_reorder(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch("views.main_window.QSettings", return_value=QSettings(
+                str(Path(temp) / "settings.ini"), QSettings.IniFormat
+            )):
+                window = MainWindow()
+            first = {"url": "https://example.test/a", "source": "Origen", "duration": 70}
+            second = {"url": "https://example.test/b", "source": "Origen", "duration": 90}
+            window.update_item("0", "Uno", "pendiente", first)
+            window.update_item("1", "Dos", "pendiente", second)
+            def choose_second():
+                dialog = self.app.activeModalWidget()
+                choices = dialog.findChild(QListWidget)
+                choices.item(0).setCheckState(Qt.Unchecked)
+                dialog.accept()
+            QTimer.singleShot(0, choose_second)
+            self.assertEqual(window.choose_preview_items(), [DownloadRequest("https://example.test/b")])
+            window.queue_list.setCurrentRow(1)
+            window.move_selected(-1)
+            self.assertIn("Dos", window.queue_list.item(0).text())
+            window.close()
+
+    def test_cleanup_only_removes_recorded_new_partial_files(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            with patch("views.main_window.QSettings", return_value=QSettings(
+                str(root / "settings.ini"), QSettings.IniFormat
+            )):
+                window = MainWindow()
+            window.set_output_dir(temp)
+            partial = root / "new.wav.part"
+            partial.write_bytes(b"partial")
+            existing = root / "old.wav.part"
+            existing.write_bytes(b"previous")
+            window.update_item("0", "Uno", "fallido", {
+                "url": "https://example.test/a", "partial_paths": [str(partial)]
+            })
+            with patch.object(QMessageBox, "question", return_value=QMessageBox.Yes):
+                window.clean_partials()
+            self.assertFalse(partial.exists())
+            self.assertEqual(existing.read_bytes(), b"previous")
+            window.close()
+
+    def test_keyboard_shortcuts_paste_remove_and_high_contrast(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch("views.main_window.QSettings", return_value=QSettings(
+                str(Path(temp) / "settings.ini"), QSettings.IniFormat
+            )):
+                window = MainWindow()
+            window.show()
+            window.activateWindow()
+            window.url_edit.setFocus()
+            self.app.processEvents()
+            self.app.clipboard().setText("https://example.test/a\nhttps://example.test/a")
+            QTest.keyClick(window.url_edit, Qt.Key_V, Qt.ControlModifier | Qt.ShiftModifier)
+            self.app.processEvents()
+            self.assertEqual(window.urls_text().strip(), "https://example.test/a")
+            window.update_item("0", "Uno", "fallido", {"url": "https://example.test/a"})
+            window.queue_list.setFocus()
+            window.queue_list.setCurrentRow(0)
+            QTest.keyClick(window.queue_list, Qt.Key_Delete)
+            self.assertEqual(window.queue_list.count(), 0)
+            window.theme_combo.setCurrentText("Alto contraste")
+            self.assertIn("#ffff00", self.app.styleSheet())
             window.close()
 
 

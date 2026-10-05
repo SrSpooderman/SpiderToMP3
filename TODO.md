@@ -1,70 +1,23 @@
 # TODO de SpiderToMP3
 
-Punto de partida: `v0.2.1` corrige el icono del menú en Linux y `v0.2.0`
-introduce la actualización automática. La app
-descarga por lotes, permite cancelar y reintentar fallos, y guarda preferencias.
+Punto de partida: el código de `v0.3.0` añade vista previa, una cola persistente,
+control de duplicados, progreso detallado, privacidad y pruebas reales de los
+ejecutables. Todavía debe publicarse y probarse como Release.
 Aquí van **solo tareas pendientes**, ordenadas por impacto. Cada casilla describe
 un resultado comprobable; el spider ya tiene bastante con contar patas.
 
 ## P0 · Que la Release funcione fuera de CI
 
 - [ ] **Probar una actualización entre dos Releases.** Tras publicar la primera
-  versión con actualizador, comprobar en Windows y Bazzite el aviso, descarga,
-  cancelación, reemplazo, reinicio y vuelta a la copia anterior.
-- [ ] **Probar el paquete publicado en Bazzite limpio.** Instalar desde la
-  Release, abrir desde el menú, convertir un audio público, cancelar una
-  conversión y repetir tras reiniciar. Comprobar FFmpeg, Qt/EGL, Wayland y X11;
-  documentar dependencias reales y añadir una forma de desinstalar únicamente
-  los archivos instalados en `~/.local`.
-- [ ] **Probar una conversión real con los binarios de Release.** El smoke test
-  actual arranca la GUI y verifica la comunicación con el worker usando un URL
-  inválido. Añadir a CI una descarga desde un servidor HTTP local con un WAV de
-  prueba, convertirlo y verificar el archivo final en Windows y Linux.
-- [ ] **Confirmar el resultado en disco antes de marcar «Completado».**
-  `DownloadService` acepta un resultado de `yt-dlp`, pero no comprueba que el
-  audio final exista y tenga contenido. Comunicar la ruta final a la interfaz;
-  si falla la conversión o falta el archivo, marcar ese elemento como fallido.
-- [ ] **Explicar las fuentes de verdad.** Añadir al README una sección «Enlaces
-  compatibles» con ejemplos probados, errores habituales y la aclaración de que
-  el soporte de sitios depende de `yt-dlp` y puede cambiar. Rechazar enlaces de
-  Spotify con un mensaje claro mientras no exista una integración definida.
-
-## P1 · Menos clics y colas más útiles
-
-- [ ] **Vista previa antes de descargar.** Mostrar título, origen, duración y
-  número de elementos; permitir elegir cuáles descargar. Para playlists grandes,
-  pedir confirmación y aplicar un límite configurable antes de materializar toda
-  la lista en memoria (`list(_iter_entries(...))`).
-- [ ] **Controlar cada elemento de la cola.** Permitir quitar, reordenar y
-  reintentar el elemento seleccionado. Al reintentar fallos, conservar visibles
-  los completados y sus archivos; hoy `prepare_download()` borra la cola entera.
-- [ ] **Progreso que diga algo útil.** Mostrar progreso por audio, velocidad y
-  tiempo estimado cuando `yt-dlp` los proporcione. Distinguir análisis,
-  descarga y conversión, y evitar que el 99 % parezca una siesta infinita.
-- [ ] **Elegir qué hacer con duplicados.** Ofrecer «omitir», «renombrar» y
-  «preguntar» cuando el destino exista; nunca sobrescribir sin consentimiento.
-  Añadir un registro opcional por ID de origen para saltar audios ya descargados
-  aunque cambie el nombre del archivo. `yt-dlp` ofrece
-  [`download_archive`](https://github.com/yt-dlp/yt-dlp#readme) como punto de partida.
-- [ ] **Recuperar una sesión interrumpida.** Guardar la cola y sus estados de
-  forma local para reanudar pendientes tras un cierre o fallo, sin repetir los
-  completados. Dar una opción para no guardar historial y otra para borrarlo.
-- [ ] **Pegar y soltar sin pelearse con el formulario.** Añadir «Pegar enlaces»
-  desde el portapapeles, arrastrar URL o archivos `.txt` a la ventana y eliminar
-  duplicados antes de iniciar la cola.
-- [ ] **Acciones al terminar.** Añadir «Abrir archivo», «Abrir carpeta» y
-  notificación de escritorio con resumen de completados/fallidos. Mostrar la
-  ruta del resultado para poder localizarlo sin buscar a mano.
-- [ ] **Errores que se puedan resolver.** Separar fallos de red, enlace no
-  admitido, FFmpeg, permisos y archivo existente; ofrecer una acción útil para
-  cada caso. Exportar un informe de errores que oculte tokens, cookies y rutas
-  personales antes de compartirlo.
-- [ ] **Ajustes cómodos.** Ofrecer patrones de nombre predefinidos y una vista
-  previa del nombre final; añadir ajustes para tamaño máximo de playlist,
-  reintentos y espera entre intentos. Mantener valores seguros por defecto.
-- [ ] **Accesibilidad y apariencia.** Añadir atajos de teclado, foco visible,
-  lectura clara de estados de la cola y un tema oscuro/alto contraste que respete
-  la preferencia del sistema. Probar navegación solo con teclado.
+  Release `v0.3.0`, comprobar en Windows y Bazzite el aviso desde `v0.2.0`, la
+  descarga, cancelación, reemplazo y reinicio. Forzar también una versión nueva
+  que no arranque y confirmar que se restaura `.previous` y aparece el aviso.
+- [ ] **Validar `v0.3.0` publicada en instalaciones limpias.** En Bazzite,
+  instalar desde la Release, abrir desde el menú en Wayland y X11, convertir un
+  audio público, cancelar, reiniciar y ejecutar `uninstall-bazzite.sh`. Repetir
+  conversión, cancelación y actualización con el `.exe` publicado en Windows.
+  La compilación local de Linux ya superó estas pruebas en Bazzite; falta validar
+  los artefactos generados por GitHub Actions y un sistema sin datos previos.
 
 ## P2 · Integraciones y formatos con sentido
 
@@ -114,6 +67,11 @@ un resultado comprobable; el spider ya tiene bastante con contar patas.
   las transitivas, generar bloqueos verificables por plataforma y conservar en
   la Release información sobre las versiones usadas. Medir también el tamaño de
   los binarios antes de optimizarlos.
+- [ ] **Planificar la actualización de `yt-dlp`.** Está fijado en
+  `requirements.txt` y empaquetado dentro de cada ejecutable, así que los
+  cambios de los sitios requieren una nueva Release. Documentar cómo probar
+  extractores antes de subir la versión y cómo diagnosticar cuándo un enlace
+  deja de funcionar por una versión antigua.
 - [ ] **Añadir comprobaciones de calidad enfocadas.** Integrar formato/lint y
   análisis de tipos en CI; ampliar pruebas solo alrededor de la cola persistente,
   listas grandes, cancelación y archivos finales cuando esas funciones existan.

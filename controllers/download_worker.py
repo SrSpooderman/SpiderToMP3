@@ -8,7 +8,7 @@ import subprocess
 import sys
 import time
 from pathlib import Path
-from threading import Event
+from threading import Event, Lock
 
 import psutil
 
@@ -22,6 +22,7 @@ class DownloadWorker(QObject):
     progress = Signal(int)
     current_title = Signal(str)
     item_state = Signal(str, str, str, object)
+    duplicate_question = Signal(str)
     finished = Signal(bool, str)
 
     def __init__(self, settings: DownloadSettings) -> None:
@@ -29,6 +30,17 @@ class DownloadWorker(QObject):
         self.settings = settings
         self._cancelled = Event()
         self._process: subprocess.Popen[bytes] | None = None
+        self._connection: socket.socket | None = None
+        self._send_lock = Lock()
+
+    def answer_duplicate(self, decision: str) -> None:
+        connection = self._connection
+        if connection is not None:
+            with self._send_lock:
+                try:
+                    connection.sendall((json.dumps({"decision": decision}) + "\n").encode("utf-8"))
+                except OSError:
+                    pass
 
     @Slot()
     def run(self) -> None:
@@ -69,6 +81,7 @@ class DownloadWorker(QObject):
             if self._cancelled.is_set():
                 self._kill_process_tree()
             connection = self._accept_worker(listener, token)
+            self._connection = connection
             with connection:
                 message = json.dumps(settings_to_payload(self.settings)) + "\n"
                 connection.sendall(message.encode("utf-8"))
@@ -90,11 +103,14 @@ class DownloadWorker(QObject):
                             self.current_title.emit(str(values[0]))
                         elif event == "item_state":
                             self.item_state.emit(str(values[0]), str(values[1]), str(values[2]), values[3])
+                        elif event == "duplicate_question":
+                            self.duplicate_question.emit(str(values[0]))
             exit_code = self._process.wait()
         except Exception as exc:
             self.log.emit(str(exc))
             exit_code = 1
         finally:
+            self._connection = None
             listener.close()
             process = self._process
             if process is not None:

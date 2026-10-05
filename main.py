@@ -68,6 +68,16 @@ def main(smoke_test: bool = False) -> int:
     window.controller = MainController(window)
     window.update_controller = UpdateController(window, window.controller)
     window.show()
+    if getattr(sys, "frozen", False) and not smoke_test:
+        error_file = Path(str(sys.executable) + ".update-error")
+        if error_file.is_file():
+            from qt import QMessageBox
+            try:
+                message = error_file.read_text(encoding="utf-8-sig")
+                error_file.unlink()
+                QTimer.singleShot(0, lambda: QMessageBox.warning(window, "Actualización", message))
+            except OSError:
+                pass
     if smoke_test:
         QTimer.singleShot(0, app.quit)
     else:

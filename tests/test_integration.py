@@ -15,7 +15,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from controllers.main_controller import MainController
-from models import DownloadSettings
+from models import DownloadRequest, DownloadSettings
 from qt import QApplication, QSettings
 from services.download_service import DownloadService
 from views.main_window import MainWindow
@@ -40,6 +40,9 @@ class Events:
 
     def should_cancel(self):
         return False
+
+    def ask_duplicate(self, path):
+        return "skip"
 
 
 @contextmanager
@@ -93,12 +96,39 @@ class IntegrationTests(unittest.TestCase):
             existing = output / "tone.mp3"
             existing.write_bytes(b"archivo anterior")
             settings = DownloadSettings([url], output, "mp3", 2,
-                                        "%(title)s.%(ext)s", False, False)
+                                        "%(title)s.%(ext)s", False, False, duplicate_policy="ask")
             events = Events()
             summary = DownloadService(events).download(settings)
-            self.assertEqual((summary.completed, summary.failed), (0, 1))
+            self.assertEqual((summary.completed, summary.failed, summary.skipped), (0, 0, 1))
             self.assertEqual(existing.read_bytes(), b"archivo anterior")
-            self.assertIn("fallido", events.states)
+            self.assertIn("omitido", events.states)
+
+    def test_duplicate_can_be_skipped_or_renamed_without_overwrite(self):
+        with local_audio() as (root, url):
+            output = root / "out"
+            output.mkdir()
+            existing = output / "tone.mp3"
+            existing.write_bytes(b"archivo anterior")
+            base = DownloadSettings([url], output, "mp3", 2, "%(title)s.%(ext)s", False, False)
+            skipped = DownloadService(Events()).download(base)
+            self.assertEqual((skipped.completed, skipped.failed, skipped.skipped), (0, 0, 1))
+            renamed = DownloadService(Events()).download(DownloadSettings(
+                **{**base.__dict__, "duplicate_policy": "rename"}
+            ))
+            self.assertEqual((renamed.completed, renamed.failed), (1, 0))
+            self.assertEqual(existing.read_bytes(), b"archivo anterior")
+            self.assertTrue((output / "tone (2).mp3").is_file())
+
+    def test_archive_skips_same_source_id_after_name_pattern_changes(self):
+        with local_audio() as (root, url):
+            base = DownloadSettings([url], root / "out", "mp3", 2,
+                                    "%(title)s.%(ext)s", False, False, archive_enabled=True)
+            first = DownloadService(Events()).download(base)
+            second = DownloadService(Events()).download(DownloadSettings(
+                **{**base.__dict__, "filename_template": "%(title)s [%(id)s].%(ext)s"}
+            ))
+            self.assertEqual((first.completed, second.skipped, second.failed), (1, 1, 0))
+            self.assertFalse((root / "out" / "tone [tone].mp3").exists())
 
     def test_qt_window_and_worker_finish_cleanly(self):
         app = QApplication.instance() or QApplication([])
@@ -111,6 +141,7 @@ class IntegrationTests(unittest.TestCase):
             window.url_edit.setPlainText(url)
             window.set_output_dir(str(root / "out"))
             window.open_when_done_check.setChecked(False)
+            window.choose_preview_items = lambda: [DownloadRequest(url)]
             with patch("controllers.main_controller.QMessageBox.warning"):
                 controller.start_download()
                 deadline = time.monotonic() + 30
@@ -121,6 +152,39 @@ class IntegrationTests(unittest.TestCase):
             self.assertTrue((root / "out" / "tone [tone].mp3").is_file())
             self.assertEqual(window.queue_list.count(), 1)
             self.assertIn("Completado", window.queue_list.item(0).text())
+            window.close()
+
+    def test_duplicate_question_from_worker_can_be_answered_in_gui(self):
+        app = QApplication.instance() or QApplication([])
+        with local_audio() as (root, url):
+            output = root / "out"
+            output.mkdir()
+            existing = output / "tone [tone].mp3"
+            existing.write_bytes(b"anterior")
+            with patch("views.main_window.QSettings", return_value=QSettings(
+                str(root / "settings.ini"), QSettings.IniFormat
+            )):
+                window = MainWindow()
+            controller = MainController(window)
+            window.url_edit.setPlainText(url)
+            window.set_output_dir(str(output))
+            window.open_when_done_check.setChecked(False)
+            window.duplicate_combo.setCurrentIndex(window.duplicate_combo.findData("ask"))
+            window.choose_preview_items = lambda: [DownloadRequest(url)]
+            answered = []
+            def answer(path):
+                answered.append(path)
+                controller.worker.answer_duplicate("rename")
+            with patch.object(controller, "ask_duplicate", side_effect=answer), \
+                    patch("controllers.main_controller.QMessageBox.warning"):
+                controller.start_download()
+                deadline = time.monotonic() + 30
+                while controller.is_running and time.monotonic() < deadline:
+                    app.processEvents()
+                    time.sleep(0.02)
+            self.assertTrue(answered)
+            self.assertEqual(existing.read_bytes(), b"anterior")
+            self.assertTrue((output / "tone [tone] (2).mp3").is_file())
             window.close()
 
     def test_cancel_interrupts_a_stalled_request(self):

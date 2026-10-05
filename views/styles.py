@@ -1,3 +1,6 @@
+import re
+
+
 APP_STYLESHEET = """
 QWidget {
     background: #f7f7f4;
@@ -46,6 +49,10 @@ QPushButton:disabled {
     background: #b7bdc4;
     color: #eef0f2;
 }
+QPushButton:focus, QLineEdit:focus, QTextEdit:focus, QListWidget:focus,
+QComboBox:focus, QSpinBox:focus, QCheckBox:focus {
+    border: 2px solid #d85f45;
+}
 QProgressBar {
     background: #ffffff;
     border: 1px solid #d5d8df;
@@ -61,4 +68,27 @@ QSplitter::handle {
     background: #e2e4e8;
     width: 2px;
 }
+"""
+
+DARK_COLORS = {
+    "#f7f7f4": "#20242a", "#20242a": "#f0f2f4",
+    "#59606b": "#b8c0c8", "#6c4e17": "#ffe09a",
+    "#fff3cf": "#443815", "#efd27d": "#8a7136",
+    "#a32424": "#ff9b9b", "#ffffff": "#2a3038",
+    "#d5d8df": "#68727e", "#216e77": "#277d8a",
+    "#175d65": "#348e9b", "#b7bdc4": "#505963",
+    "#eef0f2": "#d1d7dc", "#e2e4e8": "#4f5862",
+}
+DARK_STYLESHEET = re.sub(r"#[0-9a-fA-F]{6}", lambda match: DARK_COLORS.get(match.group(), match.group()), APP_STYLESHEET)
+
+HIGH_CONTRAST_STYLESHEET = """
+QWidget { background: #000000; color: #ffffff; font-size: 14px; }
+QLineEdit, QTextEdit, QPlainTextEdit, QListWidget, QComboBox, QSpinBox {
+    background: #000000; color: #ffffff; border: 2px solid #ffffff; padding: 6px;
+}
+QPushButton { background: #000000; color: #ffffff; border: 2px solid #ffffff; padding: 7px; }
+QPushButton:focus, QLineEdit:focus, QTextEdit:focus, QListWidget:focus,
+QComboBox:focus, QSpinBox:focus { border: 3px solid #ffff00; }
+QProgressBar { background: #000000; color: #ffffff; border: 2px solid #ffffff; }
+QProgressBar::chunk { background: #ffff00; }
 """

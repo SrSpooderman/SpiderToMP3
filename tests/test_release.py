@@ -49,7 +49,7 @@ class ReleaseAssetsTests(unittest.TestCase):
             verify(output)
             windows_name, linux_name = asset_names()
             self.assertEqual({item.name for item in output.iterdir()},
-                             {windows_name, linux_name, "SHA256SUMS"})
+                             {windows_name, linux_name, "uninstall-bazzite.sh", "SHA256SUMS"})
             (output / windows_name).write_bytes(b"corrupto")
             with self.assertRaisesRegex(ValueError, "SHA-256"):
                 verify(output)
@@ -80,6 +80,16 @@ class ReleaseAssetsTests(unittest.TestCase):
             self.assertEqual((install_home / ".local/bin/SpiderToMP3-linux-x86_64").read_bytes(),
                              linux_binary)
             self.assertTrue((install_home / ".local/share/icons/hicolor/256x256/apps/spidertomp3.png").is_file())
+            previous = install_home / ".local/bin/SpiderToMP3-linux-x86_64.previous"
+            previous.write_bytes(b"version anterior")
+            unrelated = install_home / ".local/bin/otra-app"
+            unrelated.write_bytes(b"conservar")
+            subprocess.run(["sh", str(output / "uninstall-bazzite.sh")], check=True,
+                           env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
+                           capture_output=True)
+            self.assertFalse(previous.exists())
+            self.assertFalse((install_home / ".local/bin/SpiderToMP3-linux-x86_64").exists())
+            self.assertEqual(unrelated.read_bytes(), b"conservar")
 
 
 if __name__ == "__main__":

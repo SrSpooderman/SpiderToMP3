@@ -37,6 +37,7 @@ def prepare(input_dir: Path, output_dir: Path, version: str = APP_VERSION) -> No
 
     output_dir.mkdir(parents=True, exist_ok=True)
     copy2(windows_input, output_dir / windows_name)
+    copy2(ROOT / "packaging" / "uninstall-bazzite.sh", output_dir / "uninstall-bazzite.sh")
     with tarfile.open(output_dir / linux_name, "w:gz") as archive:
         for name, (source, mode) in LINUX_CONTENTS.items():
             path = linux_input if source is None else source
@@ -49,7 +50,7 @@ def prepare(input_dir: Path, output_dir: Path, version: str = APP_VERSION) -> No
 
     checksums = "".join(
         f"{hashlib.sha256((output_dir / name).read_bytes()).hexdigest()}  {name}\n"
-        for name in (windows_name, linux_name)
+        for name in (windows_name, linux_name, "uninstall-bazzite.sh")
     )
     (output_dir / "SHA256SUMS").write_text(checksums, encoding="ascii")
     verify(output_dir, version)
@@ -57,12 +58,12 @@ def prepare(input_dir: Path, output_dir: Path, version: str = APP_VERSION) -> No
 
 def verify(output_dir: Path, version: str = APP_VERSION) -> None:
     windows_name, linux_name = asset_names(version)
-    expected = {windows_name, linux_name, "SHA256SUMS"}
+    expected = {windows_name, linux_name, "uninstall-bazzite.sh", "SHA256SUMS"}
     if {path.name for path in output_dir.iterdir()} != expected:
         raise ValueError("Los archivos de la Release no coinciden con los esperados")
     lines = (output_dir / "SHA256SUMS").read_text(encoding="ascii").splitlines()
     checksums = [line.split("  ", 1) for line in lines]
-    if len(checksums) != 2 or {name for _, name in checksums} != {windows_name, linux_name}:
+    if len(checksums) != 3 or {name for _, name in checksums} != {windows_name, linux_name, "uninstall-bazzite.sh"}:
         raise ValueError("SHA256SUMS contiene nombres inesperados")
     for digest, name in checksums:
         if hashlib.sha256((output_dir / name).read_bytes()).hexdigest() != digest:

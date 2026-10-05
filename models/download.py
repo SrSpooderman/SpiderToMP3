@@ -21,3 +21,8 @@ class DownloadSettings:
     include_playlist: bool
     open_output_dir_when_done: bool
     retry_requests: list[DownloadRequest] = field(default_factory=list)
+    preview_only: bool = False
+    playlist_limit: int = 200
+    network_attempts: int = 2
+    duplicate_policy: str = "skip"
+    archive_enabled: bool = False

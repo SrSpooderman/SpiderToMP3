@@ -13,6 +13,7 @@ class MainControllerCloseTests(unittest.TestCase):
         self.controller.thread = Mock()
         self.controller.worker = Mock()
         self.controller._close_when_finished = False
+        self.controller._selected_preview_requests = []
 
     def test_close_during_download_waits_for_worker_to_finish(self):
         event = Mock()
@@ -57,7 +58,7 @@ class MainControllerCloseTests(unittest.TestCase):
         self.controller.window.failed_requests.return_value = [request]
         with patch.object(self.controller, "_begin_download") as begin:
             self.controller.retry_failed()
-        begin.assert_called_once_with(["https://example.test/list"], [request])
+        begin.assert_called_once_with(["https://example.test/list"], [request], preserve_queue=True)
 
     def test_cancelled_download_updates_queue_state(self):
         with patch.object(QMessageBox, "warning"):
