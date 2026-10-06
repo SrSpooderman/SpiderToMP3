@@ -48,8 +48,14 @@ class ReleaseAssetsTests(unittest.TestCase):
             prepare(inputs, output)
             verify(output)
             windows_name, linux_name = asset_names()
-            self.assertEqual({item.name for item in output.iterdir()},
-                             {windows_name, linux_name, "uninstall-bazzite.sh", "SHA256SUMS"})
+            self.assertEqual(
+                {item.name for item in output.iterdir()},
+                {windows_name, linux_name, "uninstall-bazzite.sh", "BUILD-INFO.txt", "SHA256SUMS"},
+            )
+            build_info = (output / "BUILD-INFO.txt").read_text(encoding="utf-8")
+            self.assertIn("Windows executable bytes: 7", build_info)
+            self.assertIn("Linux executable bytes: 5", build_info)
+            self.assertIn("pyside6==", build_info)
             (output / windows_name).write_bytes(b"corrupto")
             with self.assertRaisesRegex(ValueError, "SHA-256"):
                 verify(output)
@@ -61,8 +67,7 @@ class ReleaseAssetsTests(unittest.TestCase):
             inputs = root / "inputs"
             inputs.mkdir()
             (inputs / "SpiderToMP3.exe").write_bytes(b"windows")
-            linux_binary = (b'#!/bin/sh\n'
-                            b'if [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n')
+            linux_binary = b'#!/bin/sh\nif [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n'
             (inputs / "SpiderToMP3-linux-x86_64").write_bytes(linux_binary)
             output = root / "release"
             prepare(inputs, output)
@@ -74,19 +79,24 @@ class ReleaseAssetsTests(unittest.TestCase):
                     target.write_bytes(archive.extractfile(member).read())
                     target.chmod(member.mode)
             install_home = root / "user"
-            subprocess.run(["sh", str(package / "install-bazzite.sh")], check=True,
-                           env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
-                           capture_output=True)
-            self.assertEqual((install_home / ".local/bin/SpiderToMP3-linux-x86_64").read_bytes(),
-                             linux_binary)
+            subprocess.run(
+                ["sh", str(package / "install-bazzite.sh")],
+                check=True,
+                env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
+                capture_output=True,
+            )
+            self.assertEqual((install_home / ".local/bin/SpiderToMP3-linux-x86_64").read_bytes(), linux_binary)
             self.assertTrue((install_home / ".local/share/icons/hicolor/256x256/apps/spidertomp3.png").is_file())
             previous = install_home / ".local/bin/SpiderToMP3-linux-x86_64.previous"
             previous.write_bytes(b"version anterior")
             unrelated = install_home / ".local/bin/otra-app"
             unrelated.write_bytes(b"conservar")
-            subprocess.run(["sh", str(output / "uninstall-bazzite.sh")], check=True,
-                           env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
-                           capture_output=True)
+            subprocess.run(
+                ["sh", str(output / "uninstall-bazzite.sh")],
+                check=True,
+                env={**os.environ, "SPIDER_INSTALL_HOME": str(install_home)},
+                capture_output=True,
+            )
             self.assertFalse(previous.exists())
             self.assertFalse((install_home / ".local/bin/SpiderToMP3-linux-x86_64").exists())
             self.assertEqual(unrelated.read_bytes(), b"conservar")

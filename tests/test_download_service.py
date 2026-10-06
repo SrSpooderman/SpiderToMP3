@@ -65,17 +65,14 @@ class FakeYoutubeDL:
         progress({"status": "downloading", "downloaded_bytes": 50, "total_bytes": 100})
         progress({"status": "finished"})
         if "postprocessor_hooks" in self.options:
-            self.options["postprocessor_hooks"][0](
-                {"status": "finished", "postprocessor": "ExtractAudio"}
-            )
+            self.options["postprocessor_hooks"][0]({"status": "finished", "postprocessor": "ExtractAudio"})
         destination = Path(self.prepare_filename({**info, "ext": self.options["postprocessors"][0]["preferredcodec"]}))
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes(b"audio")
         return info
 
     def prepare_filename(self, info):
-        return (self.options["outtmpl"].replace("%(title)s", info["title"])
-                .replace("%(ext)s", info["ext"]))
+        return self.options["outtmpl"].replace("%(title)s", info["title"]).replace("%(ext)s", info["ext"])
 
 
 class DownloadServiceTests(unittest.TestCase):
@@ -94,7 +91,9 @@ class DownloadServiceTests(unittest.TestCase):
         )
         FakeYoutubeDL.plans = {
             "https://test.local/list": {
-                "_type": "playlist", "title": "Lista", "entries": [
+                "_type": "playlist",
+                "title": "Lista",
+                "entries": [
                     {"_type": "url", "id": "one", "title": "Uno", "url": "https://test.local/one"},
                     {"_type": "url", "id": "two", "title": "Dos", "url": "https://test.local/two"},
                 ],
@@ -103,6 +102,21 @@ class DownloadServiceTests(unittest.TestCase):
         }
         FakeYoutubeDL.failures = set()
 
+    def test_optional_metadata_and_cover_follow_format_support(self):
+        settings = DownloadSettings(**{**self.settings.__dict__, "embed_metadata": True, "embed_cover": True})
+        options = DownloadService(self.events)._options(settings)
+        self.assertEqual(
+            [item["key"] for item in options["postprocessors"]],
+            ["FFmpegExtractAudio", "FFmpegMetadata", "EmbedThumbnail"],
+        )
+        self.assertTrue(options["writethumbnail"])
+        wav = DownloadSettings(**{**settings.__dict__, "audio_format": "wav", "audio_quality": None})
+        wav_options = DownloadService(self.events)._options(wav)
+        self.assertEqual(
+            [item["key"] for item in wav_options["postprocessors"]], ["FFmpegExtractAudio", "FFmpegMetadata"]
+        )
+        self.assertFalse(wav_options["writethumbnail"])
+
     def test_playlist_tracks_are_planned_and_progress_reaches_100_last(self):
         with patch("services.download_service.YoutubeDL", FakeYoutubeDL):
             summary = DownloadService(self.events).download(self.settings)
@@ -110,8 +124,10 @@ class DownloadServiceTests(unittest.TestCase):
         self.assertEqual((summary.completed, summary.failed), (3, 0))
         self.assertEqual([state for _, _, state, _ in self.events.states].count("pendiente"), 3)
         self.assertEqual([state for _, _, state, _ in self.events.states].count("completado"), 3)
-        self.assertEqual([target["url"] for _, _, state, target in self.events.states if state == "pendiente"],
-                         ["https://test.local/one", "https://test.local/two", "https://test.local/other"])
+        self.assertEqual(
+            [target["url"] for _, _, state, target in self.events.states if state == "pendiente"],
+            ["https://test.local/one", "https://test.local/two", "https://test.local/other"],
+        )
         self.assertEqual(self.events.progress[-1], 100)
         self.assertLess(max(self.events.progress[:-1]), 100)
         self.assertEqual(self.events.progress, sorted(self.events.progress))
@@ -121,15 +137,19 @@ class DownloadServiceTests(unittest.TestCase):
         with patch("services.download_service.YoutubeDL", FakeYoutubeDL):
             summary = DownloadService(self.events).download(self.settings)
         self.assertEqual((summary.completed, summary.failed), (2, 1))
-        self.assertTrue(any(
-            key == "1" and title == "Dos" and state == "fallido"
-            and target["url"] == "https://test.local/two" and "Fallo de prueba" in target["error"]
-            for key, title, state, target in self.events.states
-        ))
-        self.assertTrue(any(
-            key == "2" and title == "Tres" and state == "completado"
-            for key, title, state, _ in self.events.states
-        ))
+        self.assertTrue(
+            any(
+                key == "1"
+                and title == "Dos"
+                and state == "fallido"
+                and target["url"] == "https://test.local/two"
+                and "Fallo de prueba" in target["error"]
+                for key, title, state, target in self.events.states
+            )
+        )
+        self.assertTrue(
+            any(key == "2" and title == "Tres" and state == "completado" for key, title, state, _ in self.events.states)
+        )
 
     def test_missing_output_is_failure_and_actual_result_path_is_reported(self):
         class MissingYoutubeDL(FakeYoutubeDL):
@@ -143,6 +163,7 @@ class DownloadServiceTests(unittest.TestCase):
         self.assertTrue(all(state != "completado" for _, _, state, _ in self.events.states))
 
         self.events = Events()
+
         class ActualPathYoutubeDL(FakeYoutubeDL):
             def process_ie_result(self, info, download=True, extra_info=None):
                 if not download:
@@ -163,24 +184,26 @@ class DownloadServiceTests(unittest.TestCase):
         FakeYoutubeDL.failures = {"two"}
         with patch("services.download_service.YoutubeDL", FakeYoutubeDL):
             DownloadService(self.events).download(self.settings)
-        target = next(target for _, title, state, target in self.events.states
-                      if title == "Dos" and state == "fallido")
+        target = next(target for _, title, state, target in self.events.states if title == "Dos" and state == "fallido")
         self.assertEqual(target["url"], "https://test.local/list")
         self.assertEqual(target["playlist_path"], [2])
         self.assertEqual(target["expected_id"], "two")
 
         FakeYoutubeDL.failures = set()
-        retry = DownloadSettings(**{
-            **self.settings.__dict__, "urls": [target["url"]],
-            "retry_requests": [DownloadRequest(target["url"], tuple(target["playlist_path"]),
-                                               target["expected_id"])],
-        })
+        retry = DownloadSettings(
+            **{
+                **self.settings.__dict__,
+                "urls": [target["url"]],
+                "retry_requests": [
+                    DownloadRequest(target["url"], tuple(target["playlist_path"]), target["expected_id"])
+                ],
+            }
+        )
         retry_events = Events()
         with patch("services.download_service.YoutubeDL", FakeYoutubeDL):
             summary = DownloadService(retry_events).download(retry)
         self.assertEqual((summary.completed, summary.failed), (1, 0))
-        self.assertEqual([title for _, title, state, _ in retry_events.states
-                          if state == "completado"], ["Dos"])
+        self.assertEqual([title for _, title, state, _ in retry_events.states if state == "completado"], ["Dos"])
 
         FakeYoutubeDL.plans["https://test.local/list"]["entries"].reverse()
         changed_events = Events()
@@ -199,10 +222,12 @@ class DownloadServiceTests(unittest.TestCase):
     def test_playlist_limit_stops_before_materializing_entire_list(self):
         class CountingEntries:
             count = 0
+
             def __iter__(self):
                 for index in range(10000):
                     self.count += 1
                     yield {"id": str(index), "title": str(index)}
+
         entries = CountingEntries()
         FakeYoutubeDL.plans["https://test.local/list"]["entries"] = entries
         settings = DownloadSettings(**{**self.settings.__dict__, "playlist_limit": 5, "preview_only": True})
@@ -215,10 +240,12 @@ class DownloadServiceTests(unittest.TestCase):
     def test_single_item_mode_does_not_traverse_playlist(self):
         class CountingEntries:
             count = 0
+
             def __iter__(self):
                 for index in range(10000):
                     self.count += 1
                     yield {"id": str(index), "title": str(index)}
+
         entries = CountingEntries()
         FakeYoutubeDL.plans["https://test.local/list"]["entries"] = entries
         settings = DownloadSettings(**{**self.settings.__dict__, "include_playlist": False, "preview_only": True})
@@ -229,14 +256,17 @@ class DownloadServiceTests(unittest.TestCase):
     def test_temporary_network_failure_retries_but_other_errors_do_not(self):
         class FlakyYoutubeDL(FakeYoutubeDL):
             attempts = 0
+
             def process_ie_result(self, info, download=True, extra_info=None):
                 if download:
                     self.__class__.attempts += 1
                     if self.__class__.attempts == 1:
                         raise DownloadError("HTTP Error 503")
                 return super().process_ie_result(info, download, extra_info)
-        settings = DownloadSettings(**{**self.settings.__dict__, "urls": ["https://test.local/other"],
-                                       "network_attempts": 2})
+
+        settings = DownloadSettings(
+            **{**self.settings.__dict__, "urls": ["https://test.local/other"], "network_attempts": 2}
+        )
         with patch("services.download_service.YoutubeDL", FlakyYoutubeDL):
             summary = DownloadService(self.events).download(settings)
         self.assertEqual((summary.completed, summary.failed), (1, 0))
@@ -272,13 +302,12 @@ class DownloadServiceTests(unittest.TestCase):
         service = DownloadService(self.events)
         for audio_format, options in QUALITY_OPTIONS.items():
             for _, quality in options:
-                settings = DownloadSettings(**{
-                    **self.settings.__dict__, "audio_format": audio_format, "audio_quality": quality
-                })
+                settings = DownloadSettings(
+                    **{**self.settings.__dict__, "audio_format": audio_format, "audio_quality": quality}
+                )
                 postprocessor = service._options(settings)["postprocessors"][0]
                 self.assertEqual(postprocessor["preferredcodec"], audio_format)
-                self.assertEqual(postprocessor.get("preferredquality"),
-                                 None if quality is None else str(quality))
+                self.assertEqual(postprocessor.get("preferredquality"), None if quality is None else str(quality))
 
 
 if __name__ == "__main__":

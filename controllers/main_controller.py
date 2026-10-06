@@ -85,7 +85,9 @@ class MainController:
         self.worker.answer_duplicate(decision)
 
     def _begin_download(
-        self, urls: list[str], retry_requests: list[DownloadRequest] | None = None,
+        self,
+        urls: list[str],
+        retry_requests: list[DownloadRequest] | None = None,
         preserve_queue: bool = False,
     ) -> None:
         if self.is_running:
@@ -111,6 +113,9 @@ class MainController:
             network_attempts=self.window.network_attempts(),
             duplicate_policy=self.window.duplicate_policy(),
             archive_enabled=self.window.archive_enabled(),
+            embed_metadata=self.window.embed_metadata(),
+            embed_cover=self.window.embed_cover(),
+            metadata_overrides=self.window.metadata_overrides(),
         )
         errors = validate_settings(settings)
         self.window.set_validation_errors(errors)
@@ -144,8 +149,12 @@ class MainController:
         if message.startswith("Finalizado:") and not self._close_when_finished:
             self.window.notify_summary(message)
 
-        if (success and not self._close_when_finished and self.worker is not None
-                and self.worker.settings.open_output_dir_when_done):
+        if (
+            success
+            and not self._close_when_finished
+            and self.worker is not None
+            and self.worker.settings.open_output_dir_when_done
+        ):
             path = self.worker.settings.output_dir.resolve()
             QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
         elif not success and message != "Descarga cancelada." and not self._close_when_finished:

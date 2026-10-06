@@ -21,32 +21,35 @@ un resultado comprobable; el spider ya tiene bastante con contar patas.
 
 ## P2 · Integraciones y formatos con sentido
 
-- [ ] **Metadatos y portada opcionales.** Añadir etiquetas de título, artista,
+- [x] **Metadatos y portada opcionales.** Añadir etiquetas de título, artista,
   álbum y portada cuando la fuente las proporcione; probar MP3, M4A, Opus y
   FLAC por separado. Permitir conservar el audio original si ya tiene el códec
   deseado para evitar reconversiones innecesarias. `yt-dlp` documenta
   [metadatos y miniaturas](https://github.com/yt-dlp/yt-dlp#readme).
-- [ ] **Enriquecimiento con MusicBrainz, solo bajo elección del usuario.** Buscar
+- [x] **Enriquecimiento con MusicBrainz, solo bajo elección del usuario.** Buscar
   coincidencias de grabación para completar etiquetas, mostrar opciones antes
   de escribirlas y respetar su [identificación y límite de llamadas](https://musicbrainz.org/doc/MusicBrainz_API).
-- [ ] **Podcasts por RSS.** Importar un feed público, previsualizar episodios,
+- [x] **Podcasts por RSS.** Importar un feed público, previsualizar episodios,
   elegir nuevos y recordar el último episodio procesado. Descargar únicamente
   los archivos publicados por el feed; la suscripción automática sería un ajuste
   separado y desactivado por defecto.
-- [ ] **Intercambiar listas con otros programas.** Importar y exportar `.m3u` y
+- [x] **Intercambiar listas con otros programas.** Importar y exportar `.m3u` y
   CSV con título, URL de origen, estado y ruta local. Aceptar archivos de texto
   sin exigir que el usuario pegue cada enlace a mano.
-- [ ] **Evaluar Spotify sin prometer audio descargable.** La [Web API](https://developer.spotify.com/documentation/web-api)
+- [x] **Evaluar Spotify sin prometer audio descargable.** La [Web API](https://developer.spotify.com/documentation/web-api)
   da acceso a metadatos bajo sus requisitos actuales, y el flujo adecuado para
   una app de escritorio es [OAuth con PKCE](https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow),
   sin secreto incrustado. Revisar permisos, alcance de playlists y política
   vigente antes de implementar cualquier consulta. No convertir pistas de
   Spotify en búsquedas para descargar audio de otro sitio: Spotify
   [prohíbe facilitar descargas de su contenido](https://developer.spotify.com/documentation/web-api/reference/get-playlists-items).
-- [ ] **Autenticación de sitios compatibles, opcional.** Estudiar la lectura
-  temporal de [cookies del navegador](https://github.com/yt-dlp/yt-dlp#readme)
-  para enlaces que requieran sesión, con consentimiento explícito, sin copiarlas
-  a preferencias ni incluirlas en registros. Probarlo en Windows y Bazzite.
+- [x] **Evaluar autenticación opcional con cookies.** Revisar el flujo y riesgos
+  de `yt-dlp`; el diseño exige consentimiento por descarga y no guardar ni
+  registrar cookies. La [evaluación](docs/browser-cookies-evaluation.md) explica
+  por qué se mantiene desactivada hasta verificar los entornos.
+- [ ] **Probar lectura de cookies en Windows y Bazzite.** Usar cuentas de prueba,
+  revisar perfiles abiertos/cerrados y almacenes de claves; confirmar que no
+  queden cookies en archivos, preferencias ni registros.
 - [ ] **Distribución más natural en Bazzite.** Preparar un Flatpak de prueba con
   acceso acotado a carpetas elegidas y FFmpeg disponible dentro del sandbox.
   Validar la experiencia antes de considerar Flathub; [Bazzite recomienda
@@ -57,24 +60,26 @@ un resultado comprobable; el spider ya tiene bastante con contar patas.
 
 ## P3 · Mantenimiento que evita futuras sorpresas
 
-- [ ] **Reducir ejecuciones duplicadas de Actions.** Ejecutar `push` para `main`
+- [x] **Reducir ejecuciones duplicadas de Actions.** Ejecutar `push` para `main`
   y etiquetas `v*`, y `pull_request` para PR; añadir `concurrency` para cancelar
   trabajos obsoletos de la misma rama sin cancelar una Release en curso.
-- [ ] **Agrupar actualizaciones pequeñas de Dependabot.** Juntar parches y
+- [x] **Agrupar actualizaciones pequeñas de Dependabot.** Juntar parches y
   versiones menores por ecosistema; dejar las mayores separadas para revisar
   cambios de compatibilidad y compilación de cada plataforma.
-- [ ] **Hacer reproducibles las compilaciones.** Separar dependencias directas de
+- [x] **Hacer reproducibles las compilaciones.** Separar dependencias directas de
   las transitivas, generar bloqueos verificables por plataforma y conservar en
   la Release información sobre las versiones usadas. Medir también el tamaño de
   los binarios antes de optimizarlos.
-- [ ] **Planificar la actualización de `yt-dlp`.** Está fijado en
+- [x] **Planificar la actualización de `yt-dlp`.** Está fijado en
   `requirements.txt` y empaquetado dentro de cada ejecutable, así que los
   cambios de los sitios requieren una nueva Release. Documentar cómo probar
   extractores antes de subir la versión y cómo diagnosticar cuándo un enlace
   deja de funcionar por una versión antigua.
-- [ ] **Añadir comprobaciones de calidad enfocadas.** Integrar formato/lint y
+- [x] **Añadir comprobaciones de calidad enfocadas.** Integrar formato/lint y
   análisis de tipos en CI; ampliar pruebas solo alrededor de la cola persistente,
   listas grandes, cancelación y archivos finales cuando esas funciones existan.
-- [ ] **Documentar distribución y privacidad.** Añadir licencia, guía breve para
-  contribuir, ubicación de preferencias e historial, política de cookies y
-  pasos para reportar fallos sin compartir datos sensibles.
+- [x] **Documentar distribución y privacidad.** Añadidos `CONTRIBUTING.md`,
+  `PRIVACY.md` y la evaluación de cookies; incluyen ubicaciones de datos,
+  límites del filtrado de informes y cómo reportar fallos sin datos sensibles.
+- [ ] **Elegir y añadir la licencia del proyecto.** Requiere decisión del
+  mantenedor; no se ha añadido una licencia sin esa elección.

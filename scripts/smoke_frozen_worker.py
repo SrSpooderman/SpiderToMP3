@@ -24,10 +24,9 @@ def main(binary: Path) -> None:
             audio.setnchannels(1)
             audio.setsampwidth(2)
             audio.setframerate(22050)
-            audio.writeframes(b"".join(
-                struct.pack("<h", int(4000 * math.sin(2 * math.pi * 440 * i / 22050)))
-                for i in range(22050)
-            ))
+            audio.writeframes(
+                b"".join(struct.pack("<h", int(4000 * math.sin(2 * math.pi * 440 * i / 22050))) for i in range(22050))
+            )
 
         class Handler(SimpleHTTPRequestHandler):
             def __init__(self, *args, **kwargs):
@@ -51,9 +50,7 @@ def main(binary: Path) -> None:
             worker = DownloadWorker(settings)
             finished: list[tuple[bool, str]] = []
             worker.finished.connect(lambda success, message: finished.append((success, message)))
-            with patch.object(sys, "executable", str(binary.resolve())), patch.object(
-                sys, "frozen", True, create=True
-            ):
+            with patch.object(sys, "executable", str(binary.resolve())), patch.object(sys, "frozen", True, create=True):
                 worker.run()
             result = root / "out" / "tone.mp3"
             if len(finished) != 1 or not finished[0][0] or not result.is_file() or result.stat().st_size == 0:

@@ -26,3 +26,6 @@ class DownloadSettings:
     network_attempts: int = 2
     duplicate_policy: str = "skip"
     archive_enabled: bool = False
+    embed_metadata: bool = False
+    embed_cover: bool = False
+    metadata_overrides: dict[str, dict[str, str]] = field(default_factory=dict)

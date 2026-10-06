@@ -35,8 +35,7 @@ class BazziteInstallerTests(unittest.TestCase):
             bundle.mkdir()
             binary = bundle / "SpiderToMP3-linux-x86_64"
             binary.write_text(
-                f"#!/bin/sh\nexec {shlex.quote(sys.executable)} "
-                f"{shlex.quote(str(project / 'main.py'))} \"$@\"\n"
+                f'#!/bin/sh\nexec {shlex.quote(sys.executable)} {shlex.quote(str(project / "main.py"))} "$@"\n'
             )
             for name, source in (
                 ("spidertomp3.svg", project / "assets" / "spidertomp3-icon.svg"),
@@ -47,8 +46,13 @@ class BazziteInstallerTests(unittest.TestCase):
             shutil.copyfile(project / "packaging" / "install-bazzite.sh", script)
             home = root / "user home"
             home.mkdir()
-            subprocess.run(["sh", str(script)], check=True, cwd=bundle,
-                           env={**os.environ, "SPIDER_INSTALL_HOME": str(home)}, capture_output=True)
+            subprocess.run(
+                ["sh", str(script)],
+                check=True,
+                cwd=bundle,
+                env={**os.environ, "SPIDER_INSTALL_HOME": str(home)},
+                capture_output=True,
+            )
 
             binary = home / ".local/bin/SpiderToMP3-linux-x86_64"
             launcher = home / ".local/share/applications/spidertomp3.desktop"
@@ -58,12 +62,10 @@ class BazziteInstallerTests(unittest.TestCase):
             self.assertTrue(icon.is_file())
             self.assertEqual(icon.read_bytes()[:8], b"\x89PNG\r\n\x1a\n")
             self.assertEqual(struct.unpack(">II", icon.read_bytes()[16:24]), (256, 256))
-            self.assertIn(f'Exec="{home / ".local/bin/SpiderToMP3-linux-x86_64"}"',
-                          launcher.read_text())
+            self.assertIn(f'Exec="{home / ".local/bin/SpiderToMP3-linux-x86_64"}"', launcher.read_text())
             self.assertIn(f"Icon={icon}", launcher.read_text())
             if shutil.which("desktop-file-validate"):
-                subprocess.run(["desktop-file-validate", str(launcher)], check=True,
-                               capture_output=True)
+                subprocess.run(["desktop-file-validate", str(launcher)], check=True, capture_output=True)
 
 
 if __name__ == "__main__":

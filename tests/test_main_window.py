@@ -9,7 +9,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from config import APP_VERSION
 from models import DownloadRequest
-from qt import QApplication, QLabel, QListWidget, QMessageBox, QSettings, QTimer, Qt
+from qt import QApplication, QLabel, QListWidget, QMessageBox, QPushButton, QScrollArea, QSettings, QTimer, Qt
+from services.musicbrainz import RecordingMatch
+from services.playlist_io import PlaylistRecord, read_playlist, write_playlist
+from services.podcast_rss import PodcastEpisode
 from views.main_window import MainWindow
 
 
@@ -29,12 +32,17 @@ class MainWindowTests(unittest.TestCase):
                 window.save_preferences(["https://example.test/one", "https://example.test/two"])
                 window.update_item("0", "Prueba", "fallido", "https://example.test/one")
                 self.assertEqual(window.failed_urls(), ["https://example.test/one"])
-                window.update_item("1", "Otra", "fallido", {
-                    "url": "https://example.test/list", "playlist_path": [3],
-                    "error": "No se pudo convertir",
-                })
-                self.assertIn(DownloadRequest("https://example.test/list", (3,)),
-                              window.failed_requests())
+                window.update_item(
+                    "1",
+                    "Otra",
+                    "fallido",
+                    {
+                        "url": "https://example.test/list",
+                        "playlist_path": [3],
+                        "error": "No se pudo convertir",
+                    },
+                )
+                self.assertIn(DownloadRequest("https://example.test/list", (3,)), window.failed_requests())
                 self.assertIn("No se pudo convertir", window.queue_list.item(1).text())
                 window.set_running(False)
                 self.assertTrue(window.retry_button.isEnabled())
@@ -50,9 +58,10 @@ class MainWindowTests(unittest.TestCase):
 
     def test_accessible_labels_and_field_errors(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(Path(temp) / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
                 window = MainWindow()
             window.show()
             self.app.processEvents()
@@ -64,15 +73,23 @@ class MainWindowTests(unittest.TestCase):
             self.assertEqual(window.queue_list.accessibleName(), "Cola de audios")
             self.assertFalse(window.windowIcon().isNull())
             buddies = {label.buddy() for label in window.findChildren(QLabel)}
-            self.assertTrue({window.url_edit, window.output_edit, window.format_combo,
-                             window.quality_combo, window.template_edit}.issubset(buddies))
+            self.assertTrue(
+                {
+                    window.url_edit,
+                    window.output_edit,
+                    window.format_combo,
+                    window.quality_combo,
+                    window.template_edit,
+                }.issubset(buddies)
+            )
             window.close()
 
     def test_log_is_bounded_can_be_copied_and_about_shows_version(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(Path(temp) / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
                 window = MainWindow()
             for index in range(1005):
                 window.append_log(f"Línea {index}")
@@ -93,7 +110,9 @@ class MainWindowTests(unittest.TestCase):
             settings = QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat)
             with patch("views.main_window.QSettings", return_value=settings):
                 window = MainWindow()
-                window.update_item("0", "Hecho", "completado", {"url": "https://example.test/a", "path": str(Path(temp) / "a.mp3")})
+                window.update_item(
+                    "0", "Hecho", "completado", {"url": "https://example.test/a", "path": str(Path(temp) / "a.mp3")}
+                )
                 window.update_item("1", "En curso", "descargando", {"url": "https://example.test/b"})
                 window.close()
                 restored = MainWindow()
@@ -107,9 +126,10 @@ class MainWindowTests(unittest.TestCase):
 
     def test_copy_log_and_queue_hide_url_secrets(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(Path(temp) / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
                 window = MainWindow()
             secret_url = "https://example.test/audio?token=secret123"
             window.append_log(f"Error con {secret_url}")
@@ -121,19 +141,22 @@ class MainWindowTests(unittest.TestCase):
 
     def test_preview_can_deselect_items_and_queue_can_reorder(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(Path(temp) / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
                 window = MainWindow()
             first = {"url": "https://example.test/a", "source": "Origen", "duration": 70}
             second = {"url": "https://example.test/b", "source": "Origen", "duration": 90}
             window.update_item("0", "Uno", "pendiente", first)
             window.update_item("1", "Dos", "pendiente", second)
+
             def choose_second():
                 dialog = self.app.activeModalWidget()
                 choices = dialog.findChild(QListWidget)
                 choices.item(0).setCheckState(Qt.Unchecked)
                 dialog.accept()
+
             QTimer.singleShot(0, choose_second)
             self.assertEqual(window.choose_preview_items(), [DownloadRequest("https://example.test/b")])
             window.queue_list.setCurrentRow(1)
@@ -144,18 +167,18 @@ class MainWindowTests(unittest.TestCase):
     def test_cleanup_only_removes_recorded_new_partial_files(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(root / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings", return_value=QSettings(str(root / "settings.ini"), QSettings.IniFormat)
+            ):
                 window = MainWindow()
             window.set_output_dir(temp)
             partial = root / "new.wav.part"
             partial.write_bytes(b"partial")
             existing = root / "old.wav.part"
             existing.write_bytes(b"previous")
-            window.update_item("0", "Uno", "fallido", {
-                "url": "https://example.test/a", "partial_paths": [str(partial)]
-            })
+            window.update_item(
+                "0", "Uno", "fallido", {"url": "https://example.test/a", "partial_paths": [str(partial)]}
+            )
             with patch.object(QMessageBox, "question", return_value=QMessageBox.Yes):
                 window.clean_partials()
             self.assertFalse(partial.exists())
@@ -164,9 +187,10 @@ class MainWindowTests(unittest.TestCase):
 
     def test_keyboard_shortcuts_paste_remove_and_high_contrast(self):
         with tempfile.TemporaryDirectory() as temp:
-            with patch("views.main_window.QSettings", return_value=QSettings(
-                str(Path(temp) / "settings.ini"), QSettings.IniFormat
-            )):
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
                 window = MainWindow()
             window.show()
             window.activateWindow()
@@ -183,6 +207,127 @@ class MainWindowTests(unittest.TestCase):
             self.assertEqual(window.queue_list.count(), 0)
             window.theme_combo.setCurrentText("Alto contraste")
             self.assertIn("#ffff00", self.app.styleSheet())
+            window.close()
+
+    def test_compact_window_keeps_primary_action_visible_without_horizontal_scrolling(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
+                window = MainWindow()
+            window.resize(860, 600)
+            window.show()
+            self.app.processEvents()
+            self.assertTrue(window.start_button.isVisible())
+            self.assertTrue(window.url_edit.isVisible())
+            self.assertEqual(len(window.findChildren(QScrollArea)), 1)
+            for theme in ("Claro", "Oscuro", "Alto contraste"):
+                window.theme_combo.setCurrentText(theme)
+                self.app.processEvents()
+                for panel in window.findChildren(QScrollArea):
+                    self.assertEqual(panel.horizontalScrollBar().maximum(), 0)
+            window.close()
+
+    def test_import_and_export_list_preserves_queue_details(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / "entrada.csv"
+            destination = root / "salida.m3u"
+            write_playlist(source, [PlaylistRecord("Canción", "https://example.test/one")])
+            with patch(
+                "views.main_window.QSettings", return_value=QSettings(str(root / "settings.ini"), QSettings.IniFormat)
+            ):
+                window = MainWindow()
+            with patch("views.main_window.QFileDialog.getOpenFileName", return_value=(str(source), "CSV")):
+                window.import_list()
+            self.assertEqual(window.urls_text(), "https://example.test/one")
+            self.assertEqual(window.queue_list.count(), 1)
+            with patch("views.main_window.QFileDialog.getSaveFileName", return_value=(str(destination), "M3U")):
+                window.export_list()
+            self.assertEqual(read_playlist(destination), [PlaylistRecord("Canción", "https://example.test/one")])
+            window.close()
+
+    def test_cover_option_is_unavailable_for_wav_and_restored_for_other_formats(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
+                window = MainWindow()
+            window.cover_check.setChecked(True)
+            window.metadata_check.setChecked(True)
+            window.format_combo.setCurrentText("wav")
+            self.assertFalse(window.cover_check.isEnabled())
+            self.assertFalse(window.embed_cover())
+            window.format_combo.setCurrentText("flac")
+            self.assertTrue(window.cover_check.isEnabled())
+            self.assertTrue(window.embed_cover())
+            window.close()
+
+    def test_rss_preview_remembers_completed_episode(self):
+        with tempfile.TemporaryDirectory() as temp:
+            settings = QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat)
+            feed = "https://example.test/podcast.xml"
+            episode = PodcastEpisode("Episodio", "https://example.test/episode.mp3", "guid-1")
+            with patch("views.main_window.QSettings", return_value=settings):
+                window = MainWindow()
+                QTimer.singleShot(0, lambda: self.app.activeModalWidget().accept())
+                window._rss_loaded(feed, [episode])
+                self.assertIn(episode.url, window.urls_text())
+                window.update_item("rss-1", episode.title, "completado", {"url": episode.url})
+                self.assertEqual(window._podcast_processed[feed][-1], episode.guid)
+                window.close()
+                restored = MainWindow()
+                selected = []
+
+                def inspect_preview():
+                    dialog = self.app.activeModalWidget()
+                    selected.append(dialog.findChild(QListWidget).item(0).checkState())
+                    dialog.accept()
+
+                QTimer.singleShot(0, inspect_preview)
+                restored._rss_loaded(feed, [episode])
+                self.assertEqual(selected, [Qt.Unchecked])
+                restored.close()
+
+    def test_musicbrainz_tags_are_added_only_after_explicit_preview_selection(self):
+        with tempfile.TemporaryDirectory() as temp:
+            with patch(
+                "views.main_window.QSettings",
+                return_value=QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat),
+            ):
+                window = MainWindow()
+            url = "https://example.test/track"
+            window.update_item("0", "Canción", "pendiente", {"url": url, "id": "track-id"})
+            match = RecordingMatch("mb-id", "Título elegido", "Artista", "Álbum", 98)
+
+            def choose_match(*args, **_kwargs):
+                return args[3][1], True
+
+            def choose_preview():
+                dialog = self.app.activeModalWidget()
+                button = next(b for b in dialog.findChildren(QPushButton) if b.text() == "Buscar en MusicBrainz")
+                button.click()
+                dialog.accept()
+
+            with (
+                patch("views.main_window.search_recordings", return_value=[match]) as search,
+                patch("views.main_window.QInputDialog.getText", return_value=("Artista", True)),
+                patch("views.main_window.QInputDialog.getItem", side_effect=choose_match),
+            ):
+                QTimer.singleShot(0, choose_preview)
+                window.choose_preview_items()
+            search.assert_called_once_with("Canción", "Artista")
+            self.assertEqual(
+                window.metadata_overrides()[f"{url}|track-id"],
+                {
+                    "title": "Título elegido",
+                    "artist": "Artista",
+                    "album": "Álbum",
+                },
+            )
+            self.assertTrue(window.embed_metadata())
             window.close()
 
 

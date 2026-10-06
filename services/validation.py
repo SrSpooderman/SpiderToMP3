@@ -16,8 +16,9 @@ def validate_settings(settings: DownloadSettings) -> dict[str, str]:
     for index, url in enumerate(settings.urls, 1):
         try:
             parsed = urlsplit(url)
-            valid = (parsed.scheme in {"http", "https"} and bool(parsed.hostname)
-                     and not any(char.isspace() for char in url))
+            valid = (
+                parsed.scheme in {"http", "https"} and bool(parsed.hostname) and not any(char.isspace() for char in url)
+            )
             if valid and parsed.port is not None:
                 valid = 0 < parsed.port <= 65535
         except ValueError:
@@ -32,8 +33,12 @@ def validate_settings(settings: DownloadSettings) -> dict[str, str]:
     template = settings.filename_template.strip()
     if not template:
         errors["template"] = "El patrón de nombre no puede estar vacío."
-    elif (Path(template).is_absolute() or PureWindowsPath(template).is_absolute()
-          or ".." in Path(template).parts or ".." in PureWindowsPath(template).parts):
+    elif (
+        Path(template).is_absolute()
+        or PureWindowsPath(template).is_absolute()
+        or ".." in Path(template).parts
+        or ".." in PureWindowsPath(template).parts
+    ):
         errors["template"] = "El patrón debe quedarse dentro de la carpeta de salida."
     elif error := YoutubeDL.validate_outtmpl(template):
         errors["template"] = f"Patrón de nombre inválido: {error}"

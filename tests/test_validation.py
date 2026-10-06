@@ -47,7 +47,13 @@ class ValidationTests(unittest.TestCase):
             self.assertIn("output", validate_settings(settings))
 
     def test_rejects_invalid_urls_before_starting(self):
-        for url in ("archivo.mp3", "file:///tmp/audio", "https://", "https://ejemplo.test:abc/audio", "https://open.spotify.com/track/123"):
+        for url in (
+            "archivo.mp3",
+            "file:///tmp/audio",
+            "https://",
+            "https://ejemplo.test:abc/audio",
+            "https://open.spotify.com/track/123",
+        ):
             settings = DownloadSettings(**{**self.settings.__dict__, "urls": [url]})
             with patch("services.validation.shutil.which", return_value="/usr/bin/ffmpeg"):
                 self.assertIn("urls", validate_settings(settings), url)

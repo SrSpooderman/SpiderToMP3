@@ -51,9 +51,14 @@ def main(smoke_test: bool = False) -> int:
             if repaired and shutil.which("kbuildsycoca6"):
                 locale_env = os.environ.copy()
                 locale_env.pop("LC_ALL", None)
-                subprocess.run(["kbuildsycoca6", "--noincremental"], stdout=subprocess.DEVNULL,
-                               stderr=subprocess.DEVNULL, timeout=10, check=False,
-                               env=locale_env)
+                subprocess.run(
+                    ["kbuildsycoca6", "--noincremental"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=10,
+                    check=False,
+                    env=locale_env,
+                )
         except (OSError, subprocess.TimeoutExpired):
             pass
     from controllers import MainController
@@ -72,6 +77,7 @@ def main(smoke_test: bool = False) -> int:
         error_file = Path(str(sys.executable) + ".update-error")
         if error_file.is_file():
             from qt import QMessageBox
+
             try:
                 message = error_file.read_text(encoding="utf-8-sig")
                 error_file.unlink()

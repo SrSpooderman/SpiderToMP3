@@ -15,9 +15,14 @@ from unittest.mock import patch
 
 from config import APP_VERSION
 from services.updater import (
-    LINUX_HELPER, LINUX_PACKAGE_FILES, UpdateError,
-    expected_checksum, is_newer_version, prepare_linux_package,
-    release_from_json, verify_download,
+    LINUX_HELPER,
+    LINUX_PACKAGE_FILES,
+    UpdateError,
+    expected_checksum,
+    is_newer_version,
+    prepare_linux_package,
+    release_from_json,
+    verify_download,
 )
 
 
@@ -27,8 +32,11 @@ class UpdaterTests(unittest.TestCase):
         name = f"SpiderToMP3-v{version}-{suffix}"
         base = f"https://github.com/SrSpooderman/SpiderToMP3/releases/download/v{version}/"
         payload = {
-            "tag_name": f"v{version}", "draft": False, "prerelease": False,
-            "body": "Cambios de prueba", "assets": [
+            "tag_name": f"v{version}",
+            "draft": False,
+            "prerelease": False,
+            "body": "Cambios de prueba",
+            "assets": [
                 {"name": name, "size": len(content), "browser_download_url": base + name},
                 {"name": "SHA256SUMS", "size": 100, "browser_download_url": base + "SHA256SUMS"},
             ],
@@ -103,8 +111,12 @@ class UpdaterTests(unittest.TestCase):
             (stage / target.name).write_text("#!/bin/sh\nexit 0\n")
             helper = root / "apply-update.sh"
             helper.write_text(LINUX_HELPER)
-            subprocess.run(["/bin/sh", str(helper), "999999999", str(stage), str(target), "no"],
-                           check=True, capture_output=True, timeout=10)
+            subprocess.run(
+                ["/bin/sh", str(helper), "999999999", str(stage), str(target), "no"],
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
             self.assertEqual(target.read_text(), "#!/bin/sh\nexit 0\n")
             self.assertEqual((root / (target.name + ".previous")).read_text(), "old")
 
@@ -121,7 +133,8 @@ class UpdaterTests(unittest.TestCase):
             helper.write_text(LINUX_HELPER)
             result = subprocess.run(
                 ["/bin/sh", str(helper), "999999999", str(stage), str(target), "no"],
-                capture_output=True, timeout=10,
+                capture_output=True,
+                timeout=10,
             )
             self.assertNotEqual(result.returncode, 0)
             self.assertEqual(target.read_text(), "old")
@@ -136,21 +149,19 @@ class UpdaterTests(unittest.TestCase):
             target = root / ".local/bin/SpiderToMP3-linux-x86_64"
             target.parent.mkdir(parents=True)
             target.write_text("old")
-            (stage / target.name).write_text(
-                '#!/bin/sh\nif [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n'
-            )
+            (stage / target.name).write_text('#!/bin/sh\nif [ "$1" = --write-menu-icon ]; then printf png > "$2"; fi\n')
             project = Path(__file__).resolve().parents[1]
-            (stage / "spidertomp3.svg").write_bytes(
-                (project / "assets/spidertomp3-icon.svg").read_bytes()
-            )
-            (stage / "spidertomp3.desktop").write_bytes(
-                (project / "packaging/spidertomp3.desktop").read_bytes()
-            )
+            (stage / "spidertomp3.svg").write_bytes((project / "assets/spidertomp3-icon.svg").read_bytes())
+            (stage / "spidertomp3.desktop").write_bytes((project / "packaging/spidertomp3.desktop").read_bytes())
             helper = root / "apply-update.sh"
             helper.write_text(LINUX_HELPER)
-            subprocess.run(["/bin/sh", str(helper), "999999999", str(stage), str(target), "yes"],
-                           check=True, capture_output=True, timeout=10,
-                           env={**os.environ, "HOME": str(root)})
+            subprocess.run(
+                ["/bin/sh", str(helper), "999999999", str(stage), str(target), "yes"],
+                check=True,
+                capture_output=True,
+                timeout=10,
+                env={**os.environ, "HOME": str(root)},
+            )
             icon = root / ".local/share/icons/hicolor/256x256/apps/spidertomp3.png"
             launcher = root / ".local/share/applications/spidertomp3.desktop"
             self.assertEqual(icon.read_bytes(), b"png")
@@ -181,11 +192,15 @@ class UpdaterTests(unittest.TestCase):
             app = QApplication.instance() or QApplication([])
             with tempfile.TemporaryDirectory() as temp:
                 settings = QSettings(str(Path(temp) / "settings.ini"), QSettings.IniFormat)
-                with patch("views.main_window.QSettings", return_value=settings), \
-                        patch("controllers.update_controller.QSettings", return_value=settings), \
-                        patch("controllers.update_controller.LATEST_RELEASE_URL",
-                              f"http://127.0.0.1:{server.server_port}/latest"), \
-                        patch("controllers.update_controller.QMessageBox.information") as info:
+                with (
+                    patch("views.main_window.QSettings", return_value=settings),
+                    patch("controllers.update_controller.QSettings", return_value=settings),
+                    patch(
+                        "controllers.update_controller.LATEST_RELEASE_URL",
+                        f"http://127.0.0.1:{server.server_port}/latest",
+                    ),
+                    patch("controllers.update_controller.QMessageBox.information") as info,
+                ):
                     window = MainWindow()
                     controller = UpdateController(window, SimpleNamespace(is_running=False))
                     window.check_updates_requested.emit()

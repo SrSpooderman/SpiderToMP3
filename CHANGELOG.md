@@ -5,6 +5,11 @@ coincidir con `APP_VERSION` en `config.py`.
 
 ## [0.3.0]
 
+- Renueva la ventana con paneles claros, pestañas para cola y actividad, temas revisados y mejor uso en ventanas pequeñas.
+- Permite importar y exportar listas CSV y M3U conservando título, origen, estado y archivo local.
+- Añade metadatos y portada opcionales para MP3, M4A, Opus y FLAC, con pruebas reales por formato.
+- Importa podcasts RSS con vista previa de episodios y recuerda los completados cuando se guarda la sesión.
+- Permite elegir de forma explícita etiquetas de MusicBrainz en la vista previa.
 - Añade vista previa con selección y orden de audios, límite configurable de listas y reanudación de la cola.
 - Muestra avance por audio y permite controlar duplicados, reintentos y un registro opcional de IDs descargados.
 - Añade pegado y arrastre de enlaces, acciones sobre archivos, informes de errores y temas accesibles.

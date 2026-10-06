@@ -51,9 +51,7 @@ def is_newer_version(candidate: str, current: str = APP_VERSION) -> bool:
     latest_numbers = tuple(int(value) for value in latest_match.groups()[:3])
     current_numbers = tuple(int(value) for value in current_match.groups()[:3])
     return latest_numbers > current_numbers or (
-        latest_numbers == current_numbers
-        and current_match.group(4) is not None
-        and latest_match.group(4) is None
+        latest_numbers == current_numbers and current_match.group(4) is not None and latest_match.group(4) is None
     )
 
 
@@ -134,8 +132,10 @@ def prepare_linux_package(archive_path: Path, staging_dir: Path) -> None:
             members = archive.getmembers()
             if {member.name for member in members} != LINUX_PACKAGE_FILES or len(members) != len(LINUX_PACKAGE_FILES):
                 raise UpdateError("El paquete Linux contiene archivos inesperados.")
-            if (any(not member.isfile() or member.size <= 0 or member.size > MAX_ASSET_BYTES for member in members)
-                    or sum(member.size for member in members) > MAX_ASSET_BYTES):
+            if (
+                any(not member.isfile() or member.size <= 0 or member.size > MAX_ASSET_BYTES for member in members)
+                or sum(member.size for member in members) > MAX_ASSET_BYTES
+            ):
                 raise UpdateError("El paquete Linux contiene archivos no válidos.")
             for member in members:
                 source = archive.extractfile(member)
@@ -265,17 +265,36 @@ def launch_installer(staging_dir: Path, current_executable: Path, system: str | 
             helper_env["LD_LIBRARY_PATH"] = original_library_path
         subprocess.Popen(
             ["/bin/sh", str(helper), str(os.getpid()), str(staging_dir), str(target), "yes" if installed else "no"],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True, env=helper_env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+            env=helper_env,
         )
     elif system == "Windows":
         helper = staging_dir / "apply-update.ps1"
         helper.write_text(WINDOWS_HELPER, encoding="utf-8-sig")
         subprocess.Popen(
-            ["powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-             "-WindowStyle", "Hidden", "-File", str(helper), "-OldPid", str(os.getpid()),
-             "-Staged", str(staging_dir / "SpiderToMP3.exe"), "-Target", str(target)],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            [
+                "powershell.exe",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-WindowStyle",
+                "Hidden",
+                "-File",
+                str(helper),
+                "-OldPid",
+                str(os.getpid()),
+                "-Staged",
+                str(staging_dir / "SpiderToMP3.exe"),
+                "-Target",
+                str(target),
+            ],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
     else:

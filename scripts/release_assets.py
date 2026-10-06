@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import tarfile
 from pathlib import Path
 from shutil import copy2
@@ -48,9 +49,23 @@ def prepare(input_dir: Path, output_dir: Path, version: str = APP_VERSION) -> No
                 info.mtime = 0
                 archive.addfile(info, file)
 
+    build_info = [f"SpiderToMP3 {version}", "Python 3.13", ""]
+    for system, binary in (("Windows", windows_input), ("Linux", linux_input)):
+        lock = ROOT / "locks" / f"build-{system}-py3.13.txt"
+        versions = re.findall(r"^([A-Za-z0-9_.-]+==[^\s\\]+)", lock.read_text(encoding="utf-8"), re.MULTILINE)
+        build_info.extend(
+            (
+                f"{system} executable bytes: {binary.stat().st_size}",
+                f"{system} lock SHA-256: {hashlib.sha256(lock.read_bytes()).hexdigest()}",
+                f"{system} packages: {', '.join(versions)}",
+                "",
+            )
+        )
+    (output_dir / "BUILD-INFO.txt").write_text("\n".join(build_info), encoding="utf-8")
+
     checksums = "".join(
         f"{hashlib.sha256((output_dir / name).read_bytes()).hexdigest()}  {name}\n"
-        for name in (windows_name, linux_name, "uninstall-bazzite.sh")
+        for name in (windows_name, linux_name, "uninstall-bazzite.sh", "BUILD-INFO.txt")
     )
     (output_dir / "SHA256SUMS").write_text(checksums, encoding="ascii")
     verify(output_dir, version)
@@ -58,12 +73,17 @@ def prepare(input_dir: Path, output_dir: Path, version: str = APP_VERSION) -> No
 
 def verify(output_dir: Path, version: str = APP_VERSION) -> None:
     windows_name, linux_name = asset_names(version)
-    expected = {windows_name, linux_name, "uninstall-bazzite.sh", "SHA256SUMS"}
+    expected = {windows_name, linux_name, "uninstall-bazzite.sh", "BUILD-INFO.txt", "SHA256SUMS"}
     if {path.name for path in output_dir.iterdir()} != expected:
         raise ValueError("Los archivos de la Release no coinciden con los esperados")
     lines = (output_dir / "SHA256SUMS").read_text(encoding="ascii").splitlines()
     checksums = [line.split("  ", 1) for line in lines]
-    if len(checksums) != 3 or {name for _, name in checksums} != {windows_name, linux_name, "uninstall-bazzite.sh"}:
+    if len(checksums) != 4 or {name for _, name in checksums} != {
+        windows_name,
+        linux_name,
+        "uninstall-bazzite.sh",
+        "BUILD-INFO.txt",
+    }:
         raise ValueError("SHA256SUMS contiene nombres inesperados")
     for digest, name in checksums:
         if hashlib.sha256((output_dir / name).read_bytes()).hexdigest() != digest:

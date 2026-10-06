@@ -77,7 +77,7 @@ class DownloadService:
                     entries = list(islice(_iter_entries(raw), settings.playlist_limit + 1))
                     if len(entries) > settings.playlist_limit:
                         truncated = True
-                        entries = entries[:settings.playlist_limit]
+                        entries = entries[: settings.playlist_limit]
                         self.events.emit_log(
                             f"La lista supera el límite de {settings.playlist_limit} audios; solo se mostrarán los primeros."
                         )
@@ -147,13 +147,17 @@ class DownloadService:
         self._emit_progress(100)
         return DownloadSummary(completed, total - completed - skipped, skipped)
 
-    def _download_track(
-        self, settings: DownloadSettings, track: Track, processed: int, total: int
-    ) -> Path:
+    def _download_track(self, settings: DownloadSettings, track: Track, processed: int, total: int) -> Path:
         with YoutubeDL(self._options(settings, track, processed, total)) as ydl:
             info = ydl.process_ie_result(track.info.copy(), download=False, extra_info=track.extra_info)
             if not isinstance(info, dict):
                 raise RuntimeError("yt-dlp no devolvió metadatos del audio.")
+            identity = f"{track.retry_request.url}|{track.info.get('id') or ''}"
+            chosen_tags = settings.metadata_overrides.get(identity, {})
+            for name in ("title", "artist", "album"):
+                value = chosen_tags.get(name)
+                if isinstance(value, str) and value.strip():
+                    info[f"meta_{name}"] = value.strip()
             if settings.archive_enabled and ydl.in_download_archive(info):
                 raise DownloadSkipped("El ID ya figura en el registro de descargas.")
             destination = Path(ydl.prepare_filename({**info, "ext": settings.audio_format}))
@@ -177,12 +181,13 @@ class DownloadService:
                     number += 1
             source_file = Path(ydl.prepare_filename({**info, "ext": info.get("ext") or settings.audio_format}))
             partial_candidates = (
-                Path(str(source_file) + ".part"), Path(str(source_file) + ".ytdl"),
-                source_file.with_name(f"{source_file.stem}.temp{source_file.suffix}"), destination,
+                Path(str(source_file) + ".part"),
+                Path(str(source_file) + ".ytdl"),
+                source_file.with_name(f"{source_file.stem}.temp{source_file.suffix}"),
+                destination,
             )
             new_partial_paths = [str(path) for path in partial_candidates if not path.exists()]
-            self._emit_state(track, "descargando", partial_paths=new_partial_paths,
-                             candidate_output=destination)
+            self._emit_state(track, "descargando", partial_paths=new_partial_paths, candidate_output=destination)
             result = ydl.process_ie_result(info, download=True, extra_info=track.extra_info)
         if result is None:
             raise RuntimeError("yt-dlp no devolvió un audio descargado.")
@@ -206,6 +211,12 @@ class DownloadService:
         if settings.audio_quality is not None:
             postprocessor["preferredquality"] = str(settings.audio_quality)
 
+        postprocessors = [postprocessor]
+        if settings.embed_metadata or settings.metadata_overrides:
+            postprocessors.append({"key": "FFmpegMetadata", "add_metadata": True, "add_chapters": False})
+        if settings.embed_cover and settings.audio_format != "wav":
+            postprocessors.append({"key": "EmbedThumbnail", "already_have_thumbnail": False})
+
         options: dict[str, Any] = {
             "format": "bestaudio/best",
             "outtmpl": str(settings.output_dir / settings.filename_template),
@@ -216,7 +227,8 @@ class DownloadService:
             "socket_timeout": 10,
             "retries": 1,
             "logger": YtdlpLogger(_EventLogSink(self.events)),
-            "postprocessors": [postprocessor],
+            "postprocessors": postprocessors,
+            "writethumbnail": settings.embed_cover and settings.audio_format != "wav",
         }
         if sys.platform.startswith("linux"):
             options["compat_opts"] = {"no-certifi"}
@@ -244,10 +256,15 @@ class DownloadService:
             if size:
                 fraction = min(max(downloaded / size, 0), 1) * 0.9
                 self._emit_progress(int((processed + fraction) / total * 100))
-            self._emit_state(track, "descargando", progress={
-                "percent": int(downloaded / size * 100) if size else None,
-                "speed": status.get("speed"), "eta": status.get("eta"),
-            })
+            self._emit_state(
+                track,
+                "descargando",
+                progress={
+                    "percent": int(downloaded / size * 100) if size else None,
+                    "speed": status.get("speed"),
+                    "eta": status.get("eta"),
+                },
+            )
 
         return hook
 
@@ -267,14 +284,22 @@ class DownloadService:
         self._last_progress = max(self._last_progress, min(value, 99)) if value < 100 else 100
         self.events.emit_progress(self._last_progress)
 
-    def _emit_state(self, track: Track, state: str, error: str = "", path: Path | None = None,
-                    progress: dict[str, Any] | None = None, help_text: str = "",
-                    partial_paths: list[str] | None = None,
-                    candidate_output: Path | None = None) -> None:
+    def _emit_state(
+        self,
+        track: Track,
+        state: str,
+        error: str = "",
+        path: Path | None = None,
+        progress: dict[str, Any] | None = None,
+        help_text: str = "",
+        partial_paths: list[str] | None = None,
+        candidate_output: Path | None = None,
+    ) -> None:
         payload = _target_payload(track.retry_request, error)
         payload["duration"] = track.info.get("duration")
         payload["id"] = track.info.get("id")
         payload["source"] = track.extra_info.get("playlist") or track.info.get("extractor_key") or "Enlace"
+        payload["artist"] = track.info.get("artist") or track.info.get("uploader") or ""
         payload["truncated"] = track.truncated
         if path is not None:
             payload["path"] = str(path)
@@ -287,7 +312,9 @@ class DownloadService:
         if candidate_output is not None:
             payload["candidate_output"] = str(candidate_output)
         self.events.emit_item_state(
-            track.key, self._titles[track.key], state,
+            track.key,
+            self._titles[track.key],
+            state,
             payload,
         )
 
@@ -308,11 +335,22 @@ def _is_temporary_network_error(exc: Exception) -> bool:
     if not isinstance(exc, DownloadError):
         return False
     message = str(exc).lower()
-    return any(marker in message for marker in (
-        "timed out", "timeout", "connection reset", "connection refused",
-        "temporary failure", "network is unreachable", "http error 429",
-        "http error 500", "http error 502", "http error 503", "http error 504",
-    ))
+    return any(
+        marker in message
+        for marker in (
+            "timed out",
+            "timeout",
+            "connection reset",
+            "connection refused",
+            "temporary failure",
+            "network is unreachable",
+            "http error 429",
+            "http error 500",
+            "http error 502",
+            "http error 503",
+            "http error 504",
+        )
+    )
 
 
 def _iter_entries(
@@ -329,16 +367,15 @@ def _iter_entries(
         for index, entry in enumerate(entries, 1):
             if entry:
                 yield from _iter_entries(
-                    entry, {**extra, "playlist": playlist, "playlist_index": index},
+                    entry,
+                    {**extra, "playlist": playlist, "playlist_index": index},
                     (*path, index),
                 )
     else:
         yield raw, extra, path
 
 
-def _entry_at_path(
-    raw: dict[str, Any] | None, path: tuple[int, ...], expected_id: str | None
-):
+def _entry_at_path(raw: dict[str, Any] | None, path: tuple[int, ...], expected_id: str | None):
     info = raw
     extra: dict[str, Any] = {}
     for index in path:
@@ -354,9 +391,7 @@ def _entry_at_path(
     return info, extra, path
 
 
-def _retry_request(
-    entry: dict[str, Any], source_url: str, path: tuple[int, ...]
-) -> DownloadRequest:
+def _retry_request(entry: dict[str, Any], source_url: str, path: tuple[int, ...]) -> DownloadRequest:
     for value in (entry.get("webpage_url"), entry.get("original_url"), entry.get("url")):
         if isinstance(value, str) and value.startswith(("http://", "https://")) and value != source_url:
             return DownloadRequest(value)
@@ -366,7 +401,8 @@ def _retry_request(
 
 def _target_payload(request: DownloadRequest, error: str = "") -> dict[str, Any]:
     payload: dict[str, Any] = {
-        "url": request.url, "playlist_path": list(request.playlist_path),
+        "url": request.url,
+        "playlist_path": list(request.playlist_path),
         "expected_id": request.expected_id,
     }
     if error:

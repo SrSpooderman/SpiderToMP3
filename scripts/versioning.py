@@ -7,9 +7,7 @@ from pathlib import Path
 from config import APP_NAME, APP_VERSION
 
 
-VERSION_PATTERN = re.compile(
-    r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$"
-)
+VERSION_PATTERN = re.compile(r"^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$")
 
 
 def check_version(version: str = APP_VERSION) -> None:
@@ -18,8 +16,10 @@ def check_version(version: str = APP_VERSION) -> None:
         raise ValueError(f"Versión inválida: {version}")
     if "-" in version:
         identifiers = version.split("-", 1)[1].split(".")
-        if any(not identifier or (identifier.isdigit() and len(identifier) > 1
-                                  and identifier.startswith("0")) for identifier in identifiers):
+        if any(
+            not identifier or (identifier.isdigit() and len(identifier) > 1 and identifier.startswith("0"))
+            for identifier in identifiers
+        ):
             raise ValueError(f"Versión inválida: {version}")
 
 

@@ -12,13 +12,25 @@ from PySide6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkRequ
 
 from config import APP_NAME, APP_VERSION
 from qt import (
-    QApplication, QDesktopServices, QMessageBox, QProgressDialog, QSettings,
-    QTimer, QUrl, Qt,
+    QApplication,
+    QDesktopServices,
+    QMessageBox,
+    QProgressDialog,
+    QSettings,
+    QTimer,
+    QUrl,
+    Qt,
 )
 from services.updater import (
-    LATEST_RELEASE_URL, MAX_ASSET_BYTES, ReleaseUpdate, UpdateError,
-    expected_checksum, launch_installer, prepare_linux_package,
-    release_from_json, verify_download,
+    LATEST_RELEASE_URL,
+    MAX_ASSET_BYTES,
+    ReleaseUpdate,
+    UpdateError,
+    expected_checksum,
+    launch_installer,
+    prepare_linux_package,
+    release_from_json,
+    verify_download,
 )
 
 
@@ -64,7 +76,9 @@ class UpdateController:
             self.output = (self.stage / self.release.asset_name).open("wb")
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"User-Agent", b"SpiderToMP3-updater")
-        request.setRawHeader(b"Accept", b"application/vnd.github+json" if state == "release" else b"application/octet-stream")
+        request.setRawHeader(
+            b"Accept", b"application/vnd.github+json" if state == "release" else b"application/octet-stream"
+        )
         request.setTransferTimeout(30_000)
         self.state = state
         self.buffer.clear()
@@ -115,7 +129,9 @@ class UpdateController:
                 if release is None:
                     self.window.set_status(f"{APP_NAME} {APP_VERSION} está actualizado.")
                     if self.manual:
-                        QMessageBox.information(self.window, "Actualizaciones", f"Ya tienes la versión más reciente ({APP_VERSION}).")
+                        QMessageBox.information(
+                            self.window, "Actualizaciones", f"Ya tienes la versión más reciente ({APP_VERSION})."
+                        )
                     return
                 self.release = release
                 self._offer_update(release)
@@ -143,10 +159,16 @@ class UpdateController:
             QDesktopServices.openUrl(QUrl(release.page_url))
             return
         if self.download_controller.is_running:
-            QMessageBox.information(self.window, "Actualizaciones", "Termina o cancela la descarga de audio antes de actualizar.")
+            QMessageBox.information(
+                self.window, "Actualizaciones", "Termina o cancela la descarga de audio antes de actualizar."
+            )
             return
         if not os.access(Path(sys.executable).resolve().parent, os.W_OK):
-            QMessageBox.warning(self.window, "Actualizaciones", "No tienes permiso para sustituir el ejecutable. Descarga la Release e instálala manualmente.")
+            QMessageBox.warning(
+                self.window,
+                "Actualizaciones",
+                "No tienes permiso para sustituir el ejecutable. Descarga la Release e instálala manualmente.",
+            )
             QDesktopServices.openUrl(QUrl(release.page_url))
             return
         self.stage = Path(tempfile.mkdtemp(prefix="spidertomp3-update-"))

@@ -15,8 +15,7 @@ from models import DownloadSettings
 class DownloadWorkerCancellationTests(unittest.TestCase):
     def test_cancel_kills_the_process_and_its_child(self):
         with tempfile.TemporaryDirectory() as temp:
-            settings = DownloadSettings([], Path(temp), "mp3", 2,
-                                        "%(title)s.%(ext)s", False, False)
+            settings = DownloadSettings([], Path(temp), "mp3", 2, "%(title)s.%(ext)s", False, False)
             worker = DownloadWorker(settings)
             code = (
                 "import subprocess,sys,time; "
@@ -36,11 +35,12 @@ class DownloadWorkerCancellationTests(unittest.TestCase):
                 worker.cancel()
                 parent.wait(timeout=5)
                 psutil.wait_procs(children, timeout=5)
-                self.assertTrue(all(
-                    not psutil.pid_exists(pid)
-                    or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
-                    for pid in child_pids
-                ))
+                self.assertTrue(
+                    all(
+                        not psutil.pid_exists(pid) or psutil.Process(pid).status() == psutil.STATUS_ZOMBIE
+                        for pid in child_pids
+                    )
+                )
             finally:
                 if parent.poll() is None:
                     parent.kill()
@@ -49,8 +49,7 @@ class DownloadWorkerCancellationTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("ffmpeg"), "FFmpeg no disponible")
     def test_cancel_kills_ffmpeg_conversion(self):
         with tempfile.TemporaryDirectory() as temp:
-            settings = DownloadSettings([], Path(temp), "mp3", 2,
-                                        "%(title)s.%(ext)s", False, False)
+            settings = DownloadSettings([], Path(temp), "mp3", 2, "%(title)s.%(ext)s", False, False)
             worker = DownloadWorker(settings)
             code = (
                 "import subprocess,sys,time; "

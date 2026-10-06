@@ -4,8 +4,7 @@ from typing import Protocol
 
 
 class LogSink(Protocol):
-    def info(self, message: str) -> None:
-        ...
+    def info(self, message: str) -> None: ...
 
 
 class YtdlpLogger:

@@ -22,8 +22,7 @@ def settings_to_payload(settings: DownloadSettings) -> dict[str, Any]:
         "include_playlist": settings.include_playlist,
         "open_output_dir_when_done": settings.open_output_dir_when_done,
         "retry_requests": [
-            {"url": request.url, "playlist_path": list(request.playlist_path),
-             "expected_id": request.expected_id}
+            {"url": request.url, "playlist_path": list(request.playlist_path), "expected_id": request.expected_id}
             for request in settings.retry_requests
         ],
         "preview_only": settings.preview_only,
@@ -31,6 +30,9 @@ def settings_to_payload(settings: DownloadSettings) -> dict[str, Any]:
         "network_attempts": settings.network_attempts,
         "duplicate_policy": settings.duplicate_policy,
         "archive_enabled": settings.archive_enabled,
+        "embed_metadata": settings.embed_metadata,
+        "embed_cover": settings.embed_cover,
+        "metadata_overrides": settings.metadata_overrides,
     }
 
 
@@ -44,8 +46,7 @@ def settings_from_payload(payload: dict[str, Any]) -> DownloadSettings:
         include_playlist=payload["include_playlist"],
         open_output_dir_when_done=payload["open_output_dir_when_done"],
         retry_requests=[
-            DownloadRequest(item["url"], tuple(item.get("playlist_path", ())),
-                            item.get("expected_id"))
+            DownloadRequest(item["url"], tuple(item.get("playlist_path", ())), item.get("expected_id"))
             for item in payload.get("retry_requests", [])
         ],
         preview_only=bool(payload.get("preview_only", False)),
@@ -53,6 +54,9 @@ def settings_from_payload(payload: dict[str, Any]) -> DownloadSettings:
         network_attempts=int(payload.get("network_attempts", 2)),
         duplicate_policy=str(payload.get("duplicate_policy", "skip")),
         archive_enabled=bool(payload.get("archive_enabled", False)),
+        embed_metadata=bool(payload.get("embed_metadata", False)),
+        embed_cover=bool(payload.get("embed_cover", False)),
+        metadata_overrides=dict(payload.get("metadata_overrides") or {}),
     )
 
 
@@ -109,8 +113,10 @@ def main() -> int:
             events._send("finished", False, str(exc) or "Error durante la descarga.")
             return 1
 
-        message = (f"Vista previa: {summary.failed} enlaces fallidos."
-                   if settings.preview_only else
-                   f"Finalizado: {summary.completed} completados, {summary.skipped} omitidos, {summary.failed} fallidos.")
+        message = (
+            f"Vista previa: {summary.failed} enlaces fallidos."
+            if settings.preview_only
+            else f"Finalizado: {summary.completed} completados, {summary.skipped} omitidos, {summary.failed} fallidos."
+        )
         events._send("finished", summary.failed == 0, message)
         return 0 if summary.failed == 0 else 1

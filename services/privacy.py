@@ -6,9 +6,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 
 URL_RE = re.compile(r"https?://[^\s<>\"']+", re.IGNORECASE)
-SECRET_RE = re.compile(
-    r"(?i)\b(token|api[_-]?key|secret|signature|authorization|cookie)\b(\s*[:=]\s*)([^\s,;]+)"
-)
+SECRET_RE = re.compile(r"(?i)\b(token|api[_-]?key|secret|signature|authorization|cookie)\b(\s*[:=]\s*)([^\s,;]+)")
 
 
 def redact_text(value: str) -> str:

@@ -77,10 +77,23 @@ Durante la descarga, la cola muestra el avance por audio, la velocidad y el
 tiempo estimado si la fuente los proporciona. La conversión se indica por
 separado. Puedes cancelar, reanudar pendientes, reintentar fallidos o el audio
 seleccionado, quitar elementos y abrir el archivo o su carpeta al terminar.
-También puedes usar **Pegar enlaces** (`Ctrl+Mayús+V`) o soltar URLs y archivos
+También puedes usar **Pegar del portapapeles** (`Ctrl+Mayús+V`) o soltar URLs y archivos
 `.txt` en la ventana. La cola se guarda para reanudarla tras un cierre; desmarca
 **Guardar historial y sesión** si no quieres conservar enlaces, y usa **Borrar
 historial** para eliminar los ya guardados.
+
+**Importar lista** abre archivos `.csv`, `.m3u` y `.m3u8`; **Exportar lista**
+guarda la cola con título, URL de origen, estado y ruta local. También se
+aceptan M3U corrientes con enlaces web o archivos locales. El CSV usa las
+columnas `title,url,status,path`. Una exportación conserva las URLs completas,
+así que revísala antes de compartirla.
+
+**Podcast RSS** consulta un feed público y muestra los episodios antes de
+añadirlos. Se seleccionan de inicio los que todavía no figuran como procesados.
+La aplicación descarga únicamente las URLs de audio que el feed publica como
+`enclosure`; recuerda el último episodio completado y otros episodios ya
+procesados si está activado **Guardar historial y sesión**. No hay suscripción
+ni descarga automática en segundo plano.
 
 En **Duplicados**, **Omitir** es la opción inicial; **Renombrar** crea un nombre
 libre y **Preguntar** pide una decisión al detectar un archivo existente en la
@@ -89,6 +102,18 @@ sobrescribe. **Omitir ID ya descargados** crea un registro opcional en la carpet
 de salida para no repetir audios aunque cambies el patrón de nombre. Los fallos
 temporales de red se reintentan con una espera breve; el número de intentos es
 configurable.
+
+En **Preferencias**, puedes activar por separado las etiquetas de título,
+artista y álbum que proporcione la fuente, y la portada cuando exista. La
+portada se admite en MP3, M4A, Opus y FLAC; WAV no ofrece esa opción. Si el
+archivo de origen ya usa el formato de audio elegido, `yt-dlp` conserva el
+audio sin reconvertirlo.
+
+En la vista previa, selecciona un audio y usa **Buscar en MusicBrainz** si
+quieres completar sus etiquetas. Verás varias grabaciones con artista, álbum
+y puntuación, y tendrás que elegir una antes de que se escriban. La consulta
+solo se envía al pulsar ese botón; no cambia el nombre del archivo ni busca
+otra fuente de audio.
 
 El registro visible, el portapapeles y el informe exportado ocultan parámetros
 de URL, credenciales comunes y la ruta de la carpeta personal. Los enlaces
@@ -118,12 +143,13 @@ respectivamente. Antes de publicar una versión, añade sus notas a
 publica una GitHub Release. Cada publicación se inicia al crear su etiqueta;
 el código por sí solo no la publica.
 
-En **Releases** de este repositorio, cada versión tendrá cuatro descargas separadas:
+En **Releases** de este repositorio, cada versión tendrá cinco descargas separadas:
 
 - `SpiderToMP3-vX.Y.Z-windows-x86_64.exe` para Windows.
 - `SpiderToMP3-vX.Y.Z-linux-x86_64.tar.gz` con el ejecutable e instalador de Linux.
-- `SHA256SUMS` para comprobar ambas descargas y el desinstalador.
+- `SHA256SUMS` para comprobar ambas descargas, el desinstalador y el manifiesto.
 - `uninstall-bazzite.sh` para quitar la instalación de usuario en Linux.
+- `BUILD-INFO.txt` con tamaños, versiones de dependencias y hashes de los bloqueos usados.
 
 Las compilaciones de ramas y pull requests dejan los ejecutables de prueba en
 **Actions → Tests → Artifacts** durante un día. Las versiones para usuarios se
@@ -171,3 +197,10 @@ dentro de una URL. El registro de pantalla conserva las últimas 1000 líneas.
 ## Próximas mejoras
 
 Consulta el [TODO de mejoras](TODO.md) para ver las tareas priorizadas.
+
+Para contribuir o reportar fallos, consulta [CONTRIBUTING.md](CONTRIBUTING.md).
+El tratamiento de enlaces e historial se explica en [PRIVACY.md](PRIVACY.md).
+El procedimiento para actualizar extractores está en
+[docs/yt-dlp-updates.md](docs/yt-dlp-updates.md).
+Los bloqueos de dependencias y las compilaciones se describen en
+[docs/builds.md](docs/builds.md).
